@@ -1,29 +1,23 @@
 function pidigits()
   local z = require 'mp.z'
 
-  local q, r, t, u, i = z(1), z(180), z(60), z(168), z(2)
-  local t1, y1, y2 = z(), z(), z()
-  local ONE, TWO, FIVE, TEN, _54 = z(1), z(2), z(5), z(10), z(54)
+  local q, r, t, u, i = z(1), z(180), z(60), z(168), 2
+  local y1, y2 = z(), z()
+  local _10 = z(10)
   return function()
     z.div(y1, y2, r, t, 'fqr')
-    t1: mul(FIVE, i)
-    t1: sub(t1, TWO)
-    y2: addmul(t1, q)
-    r:  mul(TEN, u)
+    y2: addmul(5*i-2, q)
+    r:  mul(_10, u)
     r:  mul(r, y2)
-    --r = TEN * u * (q * (FIVE*i-TWO) + r - y*t)
-    t1: mul(TWO, i)
-    t1: sub(t1, ONE)
+    -- r = 10 * u * (q * (5*i-2) + r - y*t)
     q:  mul(q, i)
-    q:  mul(q, TEN)
-    q:  mul(q, t1)
-    --q = TEN * q*i * (TWO*i-ONE)
+    q:  mul(q, 20*i-10)
+    -- q = 10 * q*i * (2*i-1)
     t:  mul(t, u)
-    --t = t * u
-    i:  add(i, ONE)
-    --i = i + ONE
-    u:  addmul(_54, i)
-    --u = u + 54 * i
+    -- t = t * u
+    i = i + 1
+    u:  add(u, 54*i)
+    -- u = u + 54 * i
     return y1
   end
 end
