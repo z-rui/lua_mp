@@ -2,7 +2,7 @@
 
 To compile and install:
 
-    $ gcc $CFLAGS -shared -o <library name> mp.c -llua -lgmp
-    $ cp <library name> $PREFIX/share/lua/5.3/
+    $ gcc $CFLAGS -shared -o mp.so mp.c -lgmp
+    $ cp mp.so $PREFIX/lib/lua/5.3/
 
 See `gibbons.lua` for usage. 
