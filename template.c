@@ -99,7 +99,7 @@ static int $_call(lua_State *L)
 
 static int $_gc(lua_State *L)
 {
-	mp$_ptr z = $_get(L, 1);
+	mp$_ptr z = luaL_checkudata(L, 1, "mp$_t");
 
 	mp$_clear(z);
 	lua_pushnil(L);
