@@ -611,7 +611,7 @@ static int q__get_part(lua_State *L, void (*op)(mpz_ptr, mpq_srcptr))
 	if (lua_type(L, 2) == LUA_TNONE) {
 		z = z_new(L);
 	} else {
-		z = luaL_checkudata(L, 2, "mpq_t");
+		z = luaL_checkudata(L, 2, "mpz_t");
 	}
 	(*op)(z, q);
 	return 1;
