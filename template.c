@@ -132,20 +132,26 @@ static int $_tostring(lua_State *L)	/** tostring(x) */
 	return 1;
 }
 
-static int $_cmp(lua_State *L)
+static int $__cmp(lua_State *L)
 {
 	return mp$_cmp($_get(L, 1), $_get(L, 2));
 }
 
+static int $_cmp(lua_State *L)
+{
+	lua_pushinteger(L, $__cmp(L));
+	return 1;
+}
+
 static int $_eq(lua_State *L)
 {
-	lua_pushboolean(L, $_cmp(L) == 0);
+	lua_pushboolean(L, $__cmp(L) == 0);
 	return 1;
 }
 
 static int $_lt(lua_State *L)
 {
-	lua_pushboolean(L, $_cmp(L) < 0);
+	lua_pushboolean(L, $__cmp(L) < 0);
 	return 1;
 }
 
@@ -659,6 +665,7 @@ static const luaL_Reg $_Reg[] =
 	{ "abs",	$_abs	},
 	{ "neg",	$_neg	},
 	{ "set",	$_set	},
+	{ "cmp",	$_cmp	},
 	{ "add",	$_add	},
 	{ "sub",	$_sub	},
 	{ "mul",	$_mul	},
