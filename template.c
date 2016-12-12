@@ -197,9 +197,6 @@ static int $_binop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 	return 1;
 }
 
-#undef OP_DCL_ALIAS
-#undef OP_DCL
-
 #define OP_DCL_ALIAS(typ, fun, alias) \
 static int $_##alias(lua_State *L) { return $_##typ(L, mp$_##fun); }
 #define OP_DCL(typ, fun) OP_DCL_ALIAS(typ, fun, fun)
@@ -647,79 +644,86 @@ static int q_set_num(lua_State *L) { return q__set_part(L, mpq_set_num); }
 static int q_set_den(lua_State *L) { return q__set_part(L, mpq_set_den); }
 #endif
 
+#define METHOD_ALIAS(name, fun) \
+	{ #name,	$_##fun	}
+#define METHOD(name) METHOD_ALIAS(name, name)
+#define METAMETHOD_ALIAS(name, fun) \
+	{ "__"#name,	$_##fun	}
+#define METAMETHOD(name) METAMETHOD_ALIAS(name, name)
+
 static const luaL_Reg $_Reg[] =
 {
-	{ "__gc",	$_gc	},
-	{ "__tostring",	$_tostring	},
-	{ "__unm",	$_neg_wrap	},
-	{ "__add",	$_add	},
-	{ "__sub",	$_sub	},
-	{ "__mul",	$_mul	},
+	METAMETHOD(gc),
+	METAMETHOD(tostring),
+	METAMETHOD_ALIAS(unm, neg_wrap),
+	METAMETHOD(add),
+	METAMETHOD(sub),
+	METAMETHOD(mul),
 #if defined(MPZ)
-	{ "__div",	$_ratdiv	},
-	{ "__idiv",	$_fdiv_q	},
-	{ "__mod",	$_fdiv_r	},
-	{ "__pow",	$_pow	},
+	METAMETHOD_ALIAS(div, ratdiv),
+	METAMETHOD_ALIAS(idiv, fdiv_q),
+	METAMETHOD_ALIAS(mod, fdiv_r),
+	METAMETHOD(pow),
 #elif defined(MPQ)
-	{ "__div",	$_div	},
+	METAMETHOD(div),
 #endif
-	{ "__eq",	$_eq	},
-	{ "__lt",	$_lt	},
+	METAMETHOD(eq),
+	METAMETHOD(lt),
+	METAMETHOD(cmp),
 #ifdef MPZ
-	{ "__band",	$_band	},
-	{ "__bor",	$_bor	},
-	{ "__bxor",	$_bxor	},
-	{ "__bnot",	$_bnot	},
+	METAMETHOD(band),
+	METAMETHOD(bor),
+	METAMETHOD(bxor),
+	METAMETHOD(bnot),
 #endif
+	METHOD(tostring),
 
-	{ "tostring",	$_tostring	},
+	METHOD(set),
+	METHOD(swap),
 
-	{ "abs",	$_abs	},
-	{ "neg",	$_neg	},
-	{ "set",	$_set	},
-	{ "cmp",	$_cmp	},
-	{ "add",	$_add	},
-	{ "sub",	$_sub	},
-	{ "mul",	$_mul	},
+	METHOD(abs),
+	METHOD(neg),
+	METHOD(add),
+	METHOD(sub),
+	METHOD(mul),
 #ifdef MPZ
-	{ "addmul",	$_addmul	},
-	{ "submul",	$_submul	},
-	{ "div",	$_intdiv	},
-	{ "pow",	$_pow	},
-	{ "sqrt",	$_sqrt	},
-	{ "root",	$_root	},
+	METHOD(addmul),
+	METHOD(submul),
+	METHOD_ALIAS(div, intdiv),
+	METHOD(pow),
+	METHOD(sqrt),
+	METHOD(root),
 
-	{ "nextprime",	$_nextprime	},
-	{ "gcd",	$_gcd	},
-	{ "gcdext",	$_gcdext	},
-	{ "lcm",	$_lcm	},
-	{ "probab_prime_p",	$_probab_prime_p	},
-	{ "fac",	$_fac	},
-	{ "bin",	$_bin	},
-	{ "fib",	$_fib	},
+	METHOD(nextprime),
+	METHOD(gcd),
+	METHOD(gcdext),
+	METHOD(lcm),
+	METHOD(probab_prime_p),
+	METHOD(fac),
+	METHOD(bin),
+	METHOD(fib),
 
-	{ "band",	$_band	},
-	{ "bor",	$_bor	},
-	{ "bxor",	$_bxor	},
-	{ "bnot",	$_bnot	},
+	METHOD(band),
+	METHOD(bor),
+	METHOD(bxor),
+	METHOD(bnot),
 
-	{ "even_p",	$_even_p	},
-	{ "odd_p",	$_odd_p	},
-	{ "perfect_power_p",	$_perfect_power_p	},
-	{ "perfect_square_p",	$_perfect_square_p	},
-	{ "divisible_p",	$_divisible_p	},
+	METHOD(even_p),
+	METHOD(odd_p),
+	METHOD(perfect_power_p),
+	METHOD(perfect_square_p),
+	METHOD(divisible_p),
 
-	{ "sizeinbase",	$_sizeinbase	},
+	METHOD(sizeinbase),
 #endif
 #ifdef MPQ
-	{ "inv",	$_inv	},
-	{ "canonicalize",	$_canonicalize	},
-	{ "get_num",	$_get_num	},
-	{ "set_num",	$_set_num	},
-	{ "get_den",	$_get_den	},
-	{ "set_den",	$_set_den	},
+	METHOD(inv),
+	METHOD(canonicalize),
+	METHOD(get_num),
+	METHOD(set_num),
+	METHOD(get_den),
+	METHOD(set_den),
 #endif
-	{ "swap",	$_swap	},
 	{ NULL,		NULL	}
 };
 
