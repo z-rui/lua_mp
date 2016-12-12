@@ -729,18 +729,9 @@ static const luaL_Reg $_Reg[] =
 
 LUALIB_API int luaopen_mp_$(lua_State *L)
 {
+	lua_pushcfunction(L, $_call);
 	luaL_newmetatable(L, "mp$_t");
 	luaL_setfuncs(L, $_Reg, 0);
-	lua_pushvalue(L, -1);
-	lua_setfield(L, -2, "__index");
 
-	lua_newtable(L);
-	lua_newtable(L);
-	lua_pushvalue(L, -3);
-	lua_setfield(L, -2, "__index");
-	lua_pushcfunction(L, $_call);
-	lua_setfield(L, -2, "__call");
-	lua_setmetatable(L, -2);
-
-	return 1;
+	return _open_common(L);
 }

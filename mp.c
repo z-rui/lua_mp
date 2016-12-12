@@ -36,6 +36,22 @@ static void _check_divisor(lua_State *L, mpz_ptr divisor)
 		luaL_error(L, "division by zero");
 }
 
+static int _open_common(lua_State *L)
+{
+	lua_pushvalue(L, -1);
+	lua_setfield(L, -2, "__index");
+
+	lua_newtable(L);
+	lua_newtable(L);
+	lua_pushvalue(L, -3);
+	lua_setfield(L, -2, "__index");
+	lua_pushvalue(L, -4);
+	lua_setfield(L, -2, "__call");
+	lua_setmetatable(L, -2);
+
+	return 1;
+}
+
 #include "mpz.c"
 #include "mpq.c"
 
