@@ -20,6 +20,22 @@
 #define MYVERSION	"mp library for " LUA_VERSION " / Dec 2016 / "\
 			"using GMP %s"
 
+#define CAN_HOLD(type, val) ((type) (val) == (val))
+
+static void _conversion_error(lua_State *L, const char *typ, int base)
+{
+	if (base)
+		luaL_error(L, "cannot convert string to %s in base %d", typ, base);
+	else
+		luaL_error(L, "cannot convert string to %s", typ);
+}
+
+static void _check_divisor(lua_State *L, mpz_ptr divisor)
+{
+	if (mpz_sgn(divisor) == 0)
+		luaL_error(L, "division by zero");
+}
+
 #include "mpz.c"
 #include "mpq.c"
 
