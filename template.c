@@ -229,6 +229,18 @@ OP_DCL_ALIAS(binop, and, band)
 OP_DCL_ALIAS(binop, ior, bor)
 OP_DCL_ALIAS(binop, xor, bxor)
 
+static int z_sizeinbase(lua_State *L)
+{
+	mpz_ptr z;
+	lua_Integer base;
+
+	z = z_get(L, 1);
+	base = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, 2 <= base && base <= 62, 2, "base must be between 2 and 62");
+	lua_pushinteger(L, mpz_sizeinbase(z, base));
+	return 1;
+}
+
 static int $_ternop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 {
 	int top;
@@ -696,6 +708,8 @@ static const luaL_Reg $_Reg[] =
 	{ "perfect_power_p",	$_perfect_power_p	},
 	{ "perfect_square_p",	$_perfect_square_p	},
 	{ "divisible_p",	$_divisible_p	},
+
+	{ "sizeinbase",	$_sizeinbase	},
 #endif
 #ifdef MPQ
 	{ "inv",	$_inv	},
