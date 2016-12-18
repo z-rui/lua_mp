@@ -45,7 +45,7 @@ static mp$_ptr $_get(lua_State *L, int i)
 			/* otherwise fall through */
 #elif defined(MPQ)
 			val = lua_tonumber(L, i);
-			luaL_argcheck(L, val != val || val * 0.0 != 0.0, 1,
+			luaL_argcheck(L, val == val && val * 0.0 == 0.0, 1,
 					"infinity or NaN");
 			z = $_new(L);
 			mp$_set_d(z, val);
