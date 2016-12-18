@@ -440,15 +440,13 @@ static int z_gcdext(lua_State *L)
 static int z_fac(lua_State *L)
 {
 	mpz_ptr z;
-	lua_Integer n, m;
+	unsigned long n, m;
 
 	z = _checkmpz(L, 1);
-	n = luaL_checkinteger(L, 2);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "integer overflow");
+	n = _checkulong(L, 2);
 	if (lua_isnone(L, 3))
 		goto simple;
-	m = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, m), 3, "integer overflow");
+	m = _checkulong(L, 3);
 	switch (m) {
 		case 1:
 simple:
@@ -468,12 +466,11 @@ simple:
 static int z_bin(lua_State *L)
 {
 	mpz_ptr z, n;
-	lua_Integer k;
+	unsigned long k;
 
 	z = _checkmpz(L, 1);
 	n = _tompz(L, 2);
-	k = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, k), 3, "integer overflow");
+	k = _checkulong(L, 3);
 	mpz_bin_ui(z, n, k);
 	lua_settop(L, 1);
 	return 1;
@@ -482,11 +479,10 @@ static int z_bin(lua_State *L)
 static int z_fib(lua_State *L)
 {
 	mpz_ptr z, z1;
-	lua_Integer n;
+	unsigned long n;
 
 	z = _checkmpz(L, 1);
-	n = luaL_checkinteger(L, 2);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "integer overflow");
+	n = _checkulong(L, 2);
 	if (lua_isnone(L, 3)) {
 		mpz_fib_ui(z, n);
 		lua_settop(L, 1);
@@ -532,12 +528,11 @@ static int z_powm(lua_State *L)
 static int z_pow(lua_State *L)
 {
 	mpz_ptr z, base;
-	lua_Integer exp;
+	unsigned long exp;
 
 	z = _checkmpz(L, 1);
 	base = _tompz(L, 2);
-	exp = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, exp), 3, "integer overflow");
+	exp = _checkulong(L, 3);
 
 	mpz_pow_ui(z, base, exp);
 	lua_settop(L, 1);
@@ -551,8 +546,7 @@ static int z_root(lua_State *L)
 
 	root = _checkmpz(L, 1);
 	z = _tompz(L, 2);
-	n = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
+	n = _checkulong(L, 3);
 	if (lua_isnone(L, 4)) {
 		mpz_root(root, z, n);
 		lua_settop(L, 1);

@@ -36,6 +36,15 @@ static void _check_divisor(lua_State *L, mpz_ptr divisor)
 		luaL_error(L, "division by zero");
 }
 
+static unsigned long _checkulong(lua_State *L, int i)
+{
+	lua_Integer val;
+
+	val = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, CAN_HOLD(unsigned long, val), i, "integer overflow");
+	return (unsigned long) val;
+}
+
 static int _open_common(lua_State *L)
 {
 	lua_pushvalue(L, -1);
