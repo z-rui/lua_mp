@@ -8,11 +8,8 @@ static mp$_ptr $_new(lua_State *L)
 	return z;
 }
 
-static mp$_ptr $__fromstring(lua_State *L, const char *s, int base)
+static void $__set_str(lua_State *L, mp$_ptr z, const char *s, int base)
 {
-	mp$_ptr z;
-
-	z = $_new(L);
 	if (mp$_set_str(z, s, base) != 0) {
 #if defined(MPZ)
 		_conversion_error(L, "integer", base);
@@ -20,7 +17,6 @@ static mp$_ptr $__fromstring(lua_State *L, const char *s, int base)
 		_conversion_error(L, "rational", base);
 #endif
 	}
-	return z;
 }
 
 static mp$_ptr $_check(lua_State *L, int i)
@@ -38,74 +34,93 @@ static mp$_ptr $_check(lua_State *L, int i)
 	return (mp$_ptr) z;
 }
 
-static mp$_ptr $_get(lua_State *L, int i)
+static void $__set(lua_State *L, int i, mp$_ptr z)
 {
-	mp$_ptr z;
+	switch (lua_type(L, i)) {
+		case LUA_TNUMBER: {
 #if defined(MPZ)
-	lua_Integer val;
-#elif defined(MPQ)
-	lua_Number val;
-#endif
+			lua_Integer val;
 
-	switch (lua_type(L, i))
-	{
-		case LUA_TNUMBER:
-#if defined(MPZ)
 			val = luaL_checkinteger(L, i);
 			if (CAN_HOLD(long, val)) {
-				z = $_new(L);
 				mp$_set_si(z, (long int) val);
-				goto replace_and_return;
+				break;
 			}
 			/* otherwise fall through */
 #elif defined(MPQ)
+			lua_Number val;
+
 			val = lua_tonumber(L, i);
-			luaL_argcheck(L, val == val && val * 0.0 == 0.0, 1,
+			luaL_argcheck(L, val == val && val * 0.0 == 0.0, i,
 					"infinity or NaN");
-			z = $_new(L);
 			mp$_set_d(z, val);
-			goto replace_and_return;
+			break;
 #endif
+		}
 		case LUA_TSTRING:
-			z = $__fromstring(L, lua_tostring(L, i), 0);
-replace_and_return:
-			lua_replace(L, i);
-			return z;
-		default:
-#ifdef MPQ
-			/* mpz_t promotion */
-			if (luaL_testudata(L, i, "mpz_t")) {
-				z = q_new(L);
-				mpq_set_z(z, lua_touserdata(L, i));
-				goto replace_and_return;
+			$__set_str(L, z, lua_tostring(L, i), 0);
+			break;
+		case LUA_TUSERDATA: {
+			void *p;
+
+			if ((p = luaL_testudata(L, i, "mpz_t")) != 0) {
+#if defined(MPZ)
+				mpz_set(z, p);
+#elif defined(MPQ)
+				mpq_set_z(z, p);
+#endif
+			} else if ((p = luaL_testudata(L, i, "mpq_t")) != 0) {
+#if defined(MPZ)
+				luaL_argcheck(L, mpz_sgn(mpq_denref((mpq_ptr) p)) > 0, i, "non-canonicalized rational");
+				mpz_set_q(z, p);
+#elif defined(MPQ)
+				mpq_set(z, p);
+#endif
 			}
+			break;
+		}
+		default:
+			luaL_error(L, "cannot convert %s to %s",
+				luaL_typename(L, i),
+#if defined(MPZ)
+				"mpz_t"
+#elif defined(MPQ)
+				"mpq_t"
 #endif
-			z = $_check(L, i);
-#ifdef MPQ
-			/* do some sanity check ...
-			 * in order to prevent exception */
-			luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
-#endif
-			return z;
+			);
 	}
-	return 0;
+}
+
+static mp$_ptr $_get(lua_State *L, int i)
+{
+	mp$_ptr z;
+
+	if ((z = luaL_testudata(L, i, "mp$_t")) != 0) {
+		return z;
+	}
+	z = $_new(L);
+	$__set(L, i, z);
+	lua_replace(L, i);
+	return z;
 }
 
 static int $_call(lua_State *L)
 {
-	lua_remove(L, 1); /* self */
-	switch (lua_gettop(L)) {
-	case 0:
-		$_new(L);
-		break;
+	mp$_ptr z;
+
+	z = $_new(L);
+	/* keep in mind that there is a
+	 * 'self' argument at index 1;
+	 * the stack now looks like:
+	 * self | args... | z */
+	switch (lua_gettop(L) - 2) {
 	case 1:
-		$_get(L, 1);
-		break;
-	case 2:
-		$__fromstring(L, luaL_checkstring(L, 1), _check_inbase(L, 2));
+		$__set(L, 2, z);
+	case 0:
 		break;
 	default:
-		return luaL_error(L, "too many arguments");
+		$__set_str(L, z, luaL_checkstring(L, 2), _check_inbase(L, 3));
+		break;
 	}
 	return 1;
 }
