@@ -260,7 +260,6 @@ static int $_neg_wrap(lua_State *L)
 #ifdef MPZ /* integer specific functions */
 OP_DCL(unop, nextprime)
 OP_DCL(unop, com)
-OP_DCL(binop, gcd)
 OP_DCL(binop, lcm)
 OP_DCL(binop, and)
 OP_DCL(binop, ior)
@@ -465,15 +464,27 @@ static int z_divisible_p(lua_State *L)
 static int z_gcdext(lua_State *L)
 {
 	mpz_ptr a, b, s, t, g;
+	int top;
 
-	g = _checkmpz(L, 1);
-	s = (lua_type(L, 2) == LUA_TNIL) ? NULL : _checkmpz(L, 2);
-	t = (lua_type(L, 3) == LUA_TNIL) ? NULL : _checkmpz(L, 3);
-	a = _tompz(L, 4);
-	b = _tompz(L, 5);
-	mpz_gcdext(g, s, t, a, b);
-	lua_settop(L, 3);
-	return 3;
+	top = lua_gettop(L);
+	if (top < 3) {
+		g = z_new(L);
+		lua_insert(L, 1);
+		top++;
+	} else {
+		g = _checkmpz(L, 1);
+	}
+	a = _tompz(L, 2);
+	b = _tompz(L, 3);
+	s = lua_isnone(L, 4) ? NULL : _checkmpz(L, 4);
+	t = lua_isnone(L, 5) ? NULL : _checkmpz(L, 5);
+	if (s)
+		mpz_gcdext(g, s, t, a, b);
+	else
+		mpz_gcd(g, a, b);
+	lua_rotate(L, 2, -2);
+	lua_settop(L, top-2);
+	return top-2;
 }
 
 static int z_fac(lua_State *L)
@@ -781,8 +792,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(root),
 
 	METHOD(nextprime),
-	METHOD(gcd),
-	METHOD(gcdext),
+	METHOD_ALIAS(gcd, gcdext),
 	METHOD(lcm),
 	METHOD(probab_prime_p),
 	METHOD(fac),
