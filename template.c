@@ -318,6 +318,21 @@ static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); 
 OP_TERN_UI(addmul)
 OP_TERN_UI(submul)
 
+static int z_mul_2exp(lua_State *L)
+{
+	mpz_ptr a, b;
+	lua_Integer n;
+
+	z__checkops(L, 2);
+	a = _checkmpz(L, 1);
+	b = _tompz(L, 2);
+	n = luaL_checkinteger(L, 3);
+	luaL_argcheck(L, n >= 0, 3, "expect non-negative");
+	mpz_mul_2exp(a, b, n);
+	lua_settop(L, 1);
+	return 1;
+}
+
 static int q_div(lua_State *L);
 
 static int z__intdiv_s(lua_State *L, int mode)
@@ -696,6 +711,7 @@ static const luaL_Reg $_Meta[] = {
 	{ "__eq",	mp_eq	},
 	{ "__lt",	mp_lt	},
 #if defined(MPZ)
+	METAMETHOD_ALIAS(shl, mul_2exp),
 	{ "__div",	q_div	},
 	METAMETHOD_ALIAS(idiv, fdiv_q),
 	METAMETHOD_ALIAS(mod, fdiv_r),
@@ -727,6 +743,7 @@ static const luaL_Reg $_Reg[] =
 #if defined(MPZ)
 	METHOD(addmul),
 	METHOD(submul),
+	METHOD(mul_2exp),
 	METHOD_ALIAS(div, intdiv),
 	METHOD(pow),
 	METHOD(sqrt),
