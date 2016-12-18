@@ -124,6 +124,16 @@ static int $_call(lua_State *L)
 	return 1;
 }
 
+static int $_set(lua_State *L)
+{
+	mp$_ptr z;
+
+	z = _checkmp$(L, 1);
+	$__set(L, 2, z);
+	lua_settop(L, 1);
+	return 1;
+}
+
 static int $_gc(lua_State *L)
 {
 	mp$_ptr z = luaL_checkudata(L, 1, "mp$_t");
@@ -256,7 +266,6 @@ static int $_neg_wrap(lua_State *L)
 	lua_settop(L, 1);
 	return $_neg(L);
 }
-OP_DCL(unop, set)
 
 OP_DCL(binop, add)
 OP_DCL(binop, sub)
