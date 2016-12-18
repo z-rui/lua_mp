@@ -527,7 +527,7 @@ static int z_bin(lua_State *L)
 	z = _checkmpz(L, 1);
 	n = _tompz(L, 2);
 	k = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, k), 3, "k overflow");
+	luaL_argcheck(L, CAN_HOLD(unsigned long, k), 3, "integer overflow");
 	mpz_bin_ui(z, n, k);
 	lua_settop(L, 1);
 	return 1;
@@ -546,16 +546,17 @@ static int z_fib(lua_State *L)
 		case 2:
 			z = _checkmpz(L, 1);
 			n = luaL_checkinteger(L, 2);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "n overflow");
+			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "integer overflow");
 			mpz_fib_ui(z, n);
 			lua_settop(L, 1);
 			return 1;
 		case 3:
 			z = _checkmpz(L, 1);
-			z1 = _checkmpz(L, 2);
-			n = luaL_checkinteger(L, 3);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "n overflow");
+			n = luaL_checkinteger(L, 2);
+			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
+			z1 = _checkmpz(L, 3);
 			mpz_fib2_ui(z, z1, n);
+			lua_remove(L, 2);
 			lua_settop(L, 2);
 			return 2;
 	}
@@ -601,7 +602,7 @@ static int z_pow(lua_State *L)
 	z__checkops(L, 2);
 	base = _tompz(L, 2);
 	exp = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, exp), 3, "exp overflow");
+	luaL_argcheck(L, CAN_HOLD(unsigned long, exp), 3, "integer overflow");
 	mpz_pow_ui(_checkmpz(L, 1), base, exp);
 	lua_settop(L, 1);
 	return 1;
@@ -621,17 +622,18 @@ static int z_root(lua_State *L)
 			root = _checkmpz(L, 1);
 			z = _tompz(L, 2);
 			n = luaL_checkinteger(L, 3);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "n overflow");
+			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
 			mpz_root(root, z, n);
 			lua_settop(L, 1);
 			return 1;
 		case 4:
 			root = _checkmpz(L, 1);
-			rem = _checkmpz(L, 2);
-			z = _tompz(L, 3);
-			n = luaL_checkinteger(L, 4);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 4, "n overflow");
+			z = _tompz(L, 2);
+			n = luaL_checkinteger(L, 3);
+			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
+			rem = _checkmpz(L, 4);
 			mpz_rootrem(root, rem, z, n);
+			lua_rotate(L, 2, -2);
 			lua_settop(L, 2);
 			return 2;
 	}
@@ -655,9 +657,10 @@ static int z_sqrt(lua_State *L)
 			return 1;
 		case 3:
 			root = _checkmpz(L, 1);
-			rem = _checkmpz(L, 2);
-			z = _tompz(L, 3);
+			z = _tompz(L, 2);
+			rem = _checkmpz(L, 3);
 			mpz_sqrtrem(root, rem, z);
+			lua_remove(L, 2);
 			lua_settop(L, 2);
 			return 2;
 	}
