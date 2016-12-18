@@ -659,22 +659,19 @@ static const luaL_Reg $_Meta[] = {
 	METAMETHOD(add),
 	METAMETHOD(sub),
 	METAMETHOD(mul),
+	METAMETHOD(eq),
+	METAMETHOD(lt),
 #if defined(MPZ)
 	METAMETHOD_ALIAS(div, ratdiv),
 	METAMETHOD_ALIAS(idiv, fdiv_q),
 	METAMETHOD_ALIAS(mod, fdiv_r),
 	METAMETHOD(pow),
-#elif defined(MPQ)
-	METAMETHOD(div),
-#endif
-	METAMETHOD(eq),
-	METAMETHOD(lt),
-	METAMETHOD(cmp),
-#ifdef MPZ
 	METAMETHOD_ALIAS(band, and),
 	METAMETHOD_ALIAS(bor, ior),
 	METAMETHOD_ALIAS(bxor, xor),
 	METAMETHOD_ALIAS(bnot, com),
+#elif defined(MPQ)
+	METAMETHOD(div),
 #endif
 	{ NULL,		NULL	}
 };
@@ -691,7 +688,8 @@ static const luaL_Reg $_Reg[] =
 	METHOD(add),
 	METHOD(sub),
 	METHOD(mul),
-#ifdef MPZ
+	METHOD(cmp),
+#if defined(MPZ)
 	METHOD(addmul),
 	METHOD(submul),
 	METHOD_ALIAS(div, intdiv),
@@ -720,8 +718,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(divisible_p),
 
 	METHOD(sizeinbase),
-#endif
-#ifdef MPQ
+#elif defined(MPQ)
 	METHOD(inv),
 	METHOD(canonicalize),
 	METHOD(get_num),
