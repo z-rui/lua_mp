@@ -467,13 +467,7 @@ static int z_gcdext(lua_State *L)
 	int top;
 
 	top = lua_gettop(L);
-	if (top < 3) {
-		g = z_new(L);
-		lua_insert(L, 1);
-		top++;
-	} else {
-		g = _checkmpz(L, 1);
-	}
+	g = _checkmpz(L, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
 	s = lua_isnone(L, 4) ? NULL : _checkmpz(L, 4);
@@ -492,10 +486,7 @@ static int z_fac(lua_State *L)
 	mpz_ptr z;
 	lua_Integer n, m;
 
-	if ((z = luaL_testudata(L, 1, "mpz_t")) == NULL) {
-		z = z_new(L);
-		lua_insert(L, 1);
-	}
+	z = _checkmpz(L, 1);
 	n = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "integer overflow");
 	if (lua_isnone(L, 3))
@@ -523,7 +514,6 @@ static int z_bin(lua_State *L)
 	mpz_ptr z, n;
 	lua_Integer k;
 
-	z__checkops(L, 2);
 	z = _checkmpz(L, 1);
 	n = _tompz(L, 2);
 	k = luaL_checkinteger(L, 3);
@@ -538,36 +528,26 @@ static int z_fib(lua_State *L)
 	mpz_ptr z, z1;
 	lua_Integer n;
 
-	switch(lua_gettop(L)) {
-		case 1:
-			z_new(L);
-			lua_insert(L, 1);
-			/* fallthrough */
-		case 2:
-			z = _checkmpz(L, 1);
-			n = luaL_checkinteger(L, 2);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "integer overflow");
-			mpz_fib_ui(z, n);
-			lua_settop(L, 1);
-			return 1;
-		case 3:
-			z = _checkmpz(L, 1);
-			n = luaL_checkinteger(L, 2);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
-			z1 = _checkmpz(L, 3);
-			mpz_fib2_ui(z, z1, n);
-			lua_remove(L, 2);
-			lua_settop(L, 2);
-			return 2;
+	z = _checkmpz(L, 1);
+	n = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "integer overflow");
+	if (lua_isnone(L, 3)) {
+		mpz_fib_ui(z, n);
+		lua_settop(L, 1);
+		return 1;
+	} else {
+		z1 = _checkmpz(L, 3);
+		mpz_fib2_ui(z, z1, n);
+		lua_remove(L, 2);
+		lua_settop(L, 2);
+		return 2;
 	}
-	return luaL_error(L, "wrong number of arguments");
 }
 
 static int z_invert(lua_State *L)
 {
 	mpz_ptr r, a, b;
 
-	z__checkops(L, 2);
 	r = _checkmpz(L, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
@@ -582,7 +562,6 @@ static int z_powm(lua_State *L)
 {
 	mpz_ptr r, a, b, c;
 
-	z__checkops(L, 3);
 	r = _checkmpz(L, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
@@ -596,14 +575,15 @@ static int z_powm(lua_State *L)
 
 static int z_pow(lua_State *L)
 {
-	mpz_ptr base;
+	mpz_ptr z, base;
 	lua_Integer exp;
 
-	z__checkops(L, 2);
+	z = _checkmpz(L, 1);
 	base = _tompz(L, 2);
 	exp = luaL_checkinteger(L, 3);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, exp), 3, "integer overflow");
-	mpz_pow_ui(_checkmpz(L, 1), base, exp);
+
+	mpz_pow_ui(z, base, exp);
 	lua_settop(L, 1);
 	return 1;
 }
@@ -613,58 +593,40 @@ static int z_root(lua_State *L)
 	mpz_ptr root, rem, z;
 	lua_Integer n;
 
-	switch(lua_gettop(L)) {
-		case 2:
-			z_new(L);
-			lua_insert(L, 1);
-			/* fallthrough */
-		case 3:
-			root = _checkmpz(L, 1);
-			z = _tompz(L, 2);
-			n = luaL_checkinteger(L, 3);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
-			mpz_root(root, z, n);
-			lua_settop(L, 1);
-			return 1;
-		case 4:
-			root = _checkmpz(L, 1);
-			z = _tompz(L, 2);
-			n = luaL_checkinteger(L, 3);
-			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
-			rem = _checkmpz(L, 4);
-			mpz_rootrem(root, rem, z, n);
-			lua_rotate(L, 2, -2);
-			lua_settop(L, 2);
-			return 2;
+	root = _checkmpz(L, 1);
+	z = _tompz(L, 2);
+	n = luaL_checkinteger(L, 3);
+	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "integer overflow");
+	if (lua_isnone(L, 4)) {
+		mpz_root(root, z, n);
+		lua_settop(L, 1);
+		return 1;
+	} else {
+		rem = _checkmpz(L, 4);
+		mpz_rootrem(root, rem, z, n);
+		lua_rotate(L, 2, -2);
+		lua_settop(L, 2);
+		return 2;
 	}
-	return luaL_error(L, "wrong number of arguments");
 }
 
 static int z_sqrt(lua_State *L)
 {
 	mpz_ptr root, rem, z;
 
-	switch(lua_gettop(L)) {
-		case 1:
-			z_new(L);
-			lua_insert(L, 1);
-			/* fallthrough */
-		case 2:
-			root = _checkmpz(L, 1);
-			z = _tompz(L, 2);
-			mpz_sqrt(root, z);
-			lua_settop(L, 1);
-			return 1;
-		case 3:
-			root = _checkmpz(L, 1);
-			z = _tompz(L, 2);
-			rem = _checkmpz(L, 3);
-			mpz_sqrtrem(root, rem, z);
-			lua_remove(L, 2);
-			lua_settop(L, 2);
-			return 2;
+	root = _checkmpz(L, 1);
+	z = _tompz(L, 2);
+	if (lua_isnone(L, 3)) {
+		mpz_sqrt(root, z);
+		lua_settop(L, 1);
+		return 1;
+	} else {
+		rem = _checkmpz(L, 3);
+		mpz_sqrtrem(root, rem, z);
+		lua_remove(L, 2);
+		lua_settop(L, 2);
+		return 2;
 	}
-	return luaL_error(L, "wrong number of arguments");
 }
 #endif
 #ifdef MPQ /* rational specfic functions */
@@ -676,7 +638,6 @@ static int q_inv(lua_State *L)
 {
 	mpq_ptr q, r;
 
-	q__checkops(L, 1);
 	q = _checkmpq(L, 1);
 	r = _tompq(L, 2);
 	_check_divisor(L, mpq_numref(q));
