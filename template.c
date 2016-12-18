@@ -105,6 +105,7 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 	mp$_ptr z;
 
 	if ((z = luaL_testudata(L, i, "mp$_t")) == 0) {
+		luaL_checkany(L, i);
 		z = $_new(L);
 		$__set(L, i, z);
 		lua_replace(L, i);
