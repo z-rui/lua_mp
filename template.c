@@ -322,6 +322,8 @@ static int $_ternop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 OP_DCL(ternop, addmul)
 OP_DCL(ternop, submul)
 
+static int q_div(lua_State *L);
+
 static int z__intdiv_s(lua_State *L, int mode)
 {
 	static void (*divops[])(mpz_ptr, mpz_srcptr, mpz_srcptr) = {
@@ -428,24 +430,6 @@ mode_parse_end:
 
 static int z_fdiv_q(lua_State *L) { return z__intdiv_s(L, 2); }
 static int z_fdiv_r(lua_State *L) { return z__intdiv_s(L, 3); }
-
-static mpq_ptr q_new(lua_State *L);
-
-/* z_ratdiv is always called as an operator */
-static int z_ratdiv(lua_State *L)
-{
-	mpq_ptr a;
-	mpz_ptr b, c;
-
-	a = q_new(L);
-	b = _tompz(L, 1);
-	c = _tompz(L, 2);
-	_check_divisor(L, c);
-	mpz_set(mpq_numref(a), b);
-	mpz_set(mpq_denref(a), c);
-	mpq_canonicalize(a);
-	return 1;
-}
 
 #define PRED_DCL(op) \
 static int z_##op(lua_State *L) { lua_pushboolean(L, mpz_##op(_tompz(L, 1))); return 1; }
@@ -712,7 +696,7 @@ static const luaL_Reg $_Meta[] = {
 	METAMETHOD(eq),
 	METAMETHOD(lt),
 #if defined(MPZ)
-	METAMETHOD_ALIAS(div, ratdiv),
+	{ "__div",	q_div	},
 	METAMETHOD_ALIAS(idiv, fdiv_q),
 	METAMETHOD_ALIAS(mod, fdiv_r),
 	METAMETHOD(pow),
