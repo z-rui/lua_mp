@@ -199,9 +199,8 @@ static int $_binop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 	return 1;
 }
 
-#define OP_DCL_ALIAS(typ, fun, alias) \
-static int $_##alias(lua_State *L) { return $_##typ(L, mp$_##fun); }
-#define OP_DCL(typ, fun) OP_DCL_ALIAS(typ, fun, fun)
+#define OP_DCL(typ, fun) \
+static int $_##fun(lua_State *L) { return $_##typ(L, mp$_##fun); }
 
 OP_DCL(unop, abs)
 OP_DCL(unop, neg)
@@ -221,12 +220,12 @@ OP_DCL(binop, mul)
 
 #ifdef MPZ /* integer specific functions */
 OP_DCL(unop, nextprime)
-OP_DCL_ALIAS(unop, com, bnot)
+OP_DCL(unop, com)
 OP_DCL(binop, gcd)
 OP_DCL(binop, lcm)
-OP_DCL_ALIAS(binop, and, band)
-OP_DCL_ALIAS(binop, ior, bor)
-OP_DCL_ALIAS(binop, xor, bxor)
+OP_DCL(binop, and)
+OP_DCL(binop, ior)
+OP_DCL(binop, xor)
 
 static int z_sizeinbase(lua_State *L)
 {
@@ -672,10 +671,10 @@ static const luaL_Reg $_Meta[] = {
 	METAMETHOD(lt),
 	METAMETHOD(cmp),
 #ifdef MPZ
-	METAMETHOD(band),
-	METAMETHOD(bor),
-	METAMETHOD(bxor),
-	METAMETHOD(bnot),
+	METAMETHOD_ALIAS(band, and),
+	METAMETHOD_ALIAS(bor, ior),
+	METAMETHOD_ALIAS(bxor, xor),
+	METAMETHOD_ALIAS(bnot, com),
 #endif
 	{ NULL,		NULL	}
 };
@@ -709,10 +708,10 @@ static const luaL_Reg $_Reg[] =
 	METHOD(bin),
 	METHOD(fib),
 
-	METHOD(band),
-	METHOD(bor),
-	METHOD(bxor),
-	METHOD(bnot),
+	METHOD_ALIAS(band, and),
+	METHOD_ALIAS(bor, ior),
+	METHOD_ALIAS(bxor, xor),
+	METHOD_ALIAS(bnot, com),
 
 	METHOD(even_p),
 	METHOD(odd_p),
