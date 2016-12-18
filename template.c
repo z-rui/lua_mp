@@ -23,6 +23,11 @@ static mp$_ptr $__fromstring(lua_State *L, const char *s, int base)
 	return z;
 }
 
+static mp$_ptr $_check(lua_State *L, int i)
+{
+	return luaL_checkudata(L, i, "mp$_t");
+}
+
 static mp$_ptr $_get(lua_State *L, int i)
 {
 	mp$_ptr z;
@@ -65,7 +70,7 @@ replace_and_return:
 				goto replace_and_return;
 			}
 #endif
-			z = luaL_checkudata(L, i, "mp$_t");
+			z = $_check(L, i);
 #ifdef MPQ
 			/* do some sanity check ...
 			 * in order to prevent exception */
@@ -113,7 +118,7 @@ static int $_tostring(lua_State *L)	/** tostring(x) */
 	size_t sz;
 	char *s;
 
-	z = luaL_checkudata(L, 1, "mp$_t");
+	z = $_check(L, 1);
 	base = _check_outbase(L, 2);
 #if defined(MPZ)
 	sz = mpz_sizeinbase(z, abs(base)) + 2;
@@ -155,8 +160,8 @@ static int $_swap(lua_State *L)
 {
 	mp$_ptr a, b;
 
-	a = luaL_checkudata(L, 1, "mp$_t");
-	b = luaL_checkudata(L, 2, "mp$_t");
+	a = $_check(L, 1);
+	b = $_check(L, 2);
 	mp$_swap(a, b);
 	return 0;
 }
@@ -180,7 +185,7 @@ static void $__checkops(lua_State *L, int ops)
 static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 {
 	$__checkops(L, 1);
-	(*op)(luaL_checkudata(L, 1, "mp$_t"), $_get(L, 2));
+	(*op)($_check(L, 1), $_get(L, 2));
 	lua_settop(L, 1);
 	return 1;
 }
@@ -188,7 +193,7 @@ static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 static int $_binop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 {
 	$__checkops(L, 2);
-	(*op)(luaL_checkudata(L, 1, "mp$_t"), $_get(L, 2), $_get(L, 3));
+	(*op)($_check(L, 1), $_get(L, 2), $_get(L, 3));
 	lua_settop(L, 1);
 	return 1;
 }
@@ -240,7 +245,7 @@ static int $_ternop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 	top = lua_gettop(L);
 	if (top != 3)
 		luaL_error(L, "too %s arguments", (top > 3) ? "many" : "few");
-	(*op)(luaL_checkudata(L, 1, "mp$_t"), $_get(L, 2), $_get(L, 3));
+	(*op)($_check(L, 1), $_get(L, 2), $_get(L, 3));
 	lua_settop(L, 1);
 	return 1;
 }
@@ -259,7 +264,7 @@ static int z__intdiv_s(lua_State *L, int mode)
 	mpz_ptr a, b, c;
 
 	z__checkops(L, 2);
-	a = luaL_checkudata(L, 1, "mpz_t");
+	a = z_check(L, 1);
 	b = z_get(L, 2);
 	c = z_get(L, 3);
 	_check_divisor(L, c);
@@ -288,8 +293,8 @@ static int z__intdiv_d(lua_State *L, int mode)
 		default:
 			luaL_error(L, "wrong number of arguments");
 	}
-	a = luaL_checkudata(L, 1, "mpz_t");
-	b = luaL_checkudata(L, 2, "mpz_t");
+	a = z_check(L, 1);
+	b = z_check(L, 2);
 	c = z_get(L, 3);
 	d = z_get(L, 4);
 	_check_divisor(L, d);
@@ -398,9 +403,9 @@ static int z_gcdext(lua_State *L)
 {
 	mpz_ptr a, b, s, t, g;
 
-	g = luaL_checkudata(L, 1, "mpz_t");
-	s = (lua_type(L, 2) == LUA_TNIL) ? NULL : luaL_checkudata(L, 2, "mpz_t");
-	t = (lua_type(L, 3) == LUA_TNIL) ? NULL : luaL_checkudata(L, 3, "mpz_t");
+	g = z_check(L, 1);
+	s = (lua_type(L, 2) == LUA_TNIL) ? NULL : z_check(L, 2);
+	t = (lua_type(L, 3) == LUA_TNIL) ? NULL : z_check(L, 3);
 	a = z_get(L, 4);
 	b = z_get(L, 5);
 	mpz_gcdext(g, s, t, a, b);
@@ -417,7 +422,7 @@ static int z_fac(lua_State *L)
 		z = z_new(L);
 		lua_insert(L, 1);
 	} else {
-		z = luaL_checkudata(L, 1, "mpz_t");
+		z = z_check(L, 1);
 	}
 	n = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "n overflow");
@@ -448,7 +453,7 @@ static int z_bin(lua_State *L)
 	lua_Integer k;
 
 	z__checkops(L, 2);
-	z = luaL_checkudata(L, 1, "mpz_t");
+	z = z_check(L, 1);
 	n = z_get(L, 2);
 	k = luaL_checkinteger(L, 3);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, k), 3, "k overflow");
@@ -468,15 +473,15 @@ static int z_fib(lua_State *L)
 			lua_insert(L, 1);
 			/* fallthrough */
 		case 2:
-			z = luaL_checkudata(L, 1, "mpz_t");
+			z = z_check(L, 1);
 			n = luaL_checkinteger(L, 2);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "n overflow");
 			mpz_fib_ui(z, n);
 			lua_settop(L, 1);
 			return 1;
 		case 3:
-			z = luaL_checkudata(L, 1, "mpz_t");
-			z1 = luaL_checkudata(L, 2, "mpz_t");
+			z = z_check(L, 1);
+			z1 = z_check(L, 2);
 			n = luaL_checkinteger(L, 3);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "n overflow");
 			mpz_fib2_ui(z, z1, n);
@@ -495,7 +500,7 @@ static int z_pow(lua_State *L)
 	base = z_get(L, 2);
 	exp = luaL_checkinteger(L, 3);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, exp), 3, "exp overflow");
-	mpz_pow_ui(luaL_checkudata(L, 1, "mpz_t"), base, exp);
+	mpz_pow_ui(z_check(L, 1), base, exp);
 	lua_settop(L, 1);
 	return 1;
 }
@@ -511,7 +516,7 @@ static int z_root(lua_State *L)
 			lua_insert(L, 1);
 			/* fallthrough */
 		case 3:
-			root = luaL_checkudata(L, 1, "mpz_t");
+			root = z_check(L, 1);
 			z = z_get(L, 2);
 			n = luaL_checkinteger(L, 3);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "n overflow");
@@ -519,8 +524,8 @@ static int z_root(lua_State *L)
 			lua_settop(L, 1);
 			return 1;
 		case 4:
-			root = luaL_checkudata(L, 1, "mpz_t");
-			rem = luaL_checkudata(L, 2, "mpz_t");
+			root = z_check(L, 1);
+			rem = z_check(L, 2);
 			z = z_get(L, 3);
 			n = luaL_checkinteger(L, 4);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 4, "n overflow");
@@ -541,14 +546,14 @@ static int z_sqrt(lua_State *L)
 			lua_insert(L, 1);
 			/* fallthrough */
 		case 2:
-			root = luaL_checkudata(L, 1, "mpz_t");
+			root = z_check(L, 1);
 			z = z_get(L, 2);
 			mpz_sqrt(root, z);
 			lua_settop(L, 1);
 			return 1;
 		case 3:
-			root = luaL_checkudata(L, 1, "mpz_t");
-			rem = luaL_checkudata(L, 2, "mpz_t");
+			root = z_check(L, 1);
+			rem = z_check(L, 2);
 			z = z_get(L, 3);
 			mpz_sqrtrem(root, rem, z);
 			lua_settop(L, 2);
@@ -563,7 +568,7 @@ static int q_inv(lua_State *L)
 	mpq_ptr q, r;
 
 	q__checkops(L, 1);
-	q = luaL_checkudata(L, 1, "mpq_t");
+	q = q_check(L, 1);
 	r = q_get(L, 2);
 	_check_divisor(L, mpq_numref(q));
 	mpq_inv(q, r);
@@ -576,7 +581,7 @@ static int q_div(lua_State *L)
 	mpq_ptr a, b, c;
 
 	q__checkops(L, 2);
-	a = luaL_checkudata(L, 1, "mpq_t");
+	a = q_check(L, 1);
 	b = q_get(L, 2);
 	c = q_get(L, 3);
 	_check_divisor(L, mpq_numref(c));
@@ -589,7 +594,7 @@ static int q_canonicalize(lua_State *L)
 {
 	mpq_ptr q;
 
-	q = luaL_checkudata(L, 1, "mpq_t");
+	q = q_check(L, 1);
 	_check_divisor(L, mpq_denref(q));
 	if (lua_type(L, 2) == LUA_TBOOLEAN && !lua_toboolean(L, 2)) {
 		/* only fix the sign of denominator, */
@@ -611,11 +616,11 @@ static int q__get_part(lua_State *L, void (*op)(mpz_ptr, mpq_srcptr))
 	mpq_ptr q;
 	mpz_ptr z;
 
-	q = luaL_checkudata(L, 1, "mpq_t");
+	q = q_check(L, 1);
 	if (lua_type(L, 2) == LUA_TNONE) {
 		z = z_new(L);
 	} else {
-		z = luaL_checkudata(L, 2, "mpz_t");
+		z = z_check(L, 2);
 	}
 	(*op)(z, q);
 	return 1;
@@ -629,7 +634,7 @@ static int q__set_part(lua_State *L, void (*op)(mpq_ptr, mpz_srcptr))
 	mpq_ptr q;
 	mpz_ptr z;
 
-	q = luaL_checkudata(L, 1, "mpq_t");
+	q = q_check(L, 1);
 	z = z_get(L, 2);
 	(*op)(q, z);
 	return 0;
