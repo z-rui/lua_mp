@@ -212,22 +212,6 @@ static int $_swap(lua_State *L)
 	return 0;
 }
 
-static void $__checkops(lua_State *L, int ops)
-{
-	int top;
-
-	top = lua_gettop(L);
-	switch (top - ops) {
-		case 0:
-			$_new(L);
-			lua_insert(L, 1);
-		case 1:
-			break;
-		default:
-			luaL_error(L, "expect %d or %d arguments, got %d", ops, ops+1, top);
-	}
-}
-
 static void $__fixmeta(lua_State *L)
 {
 	lua_Debug ar;
@@ -291,6 +275,7 @@ static int $_##fun(lua_State *L) { $__fixmeta(L); return $_uiop(L, mp$_##fun, mp
 OP_BIN_UI(add)
 OP_BIN_UI(sub)
 OP_BIN_UI(mul)
+OP_BIN_UI(divexact)
 
 static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
 {
@@ -339,54 +324,32 @@ static int z_mul_2exp(lua_State *L)
 
 static int q_div(lua_State *L);
 
-static int z__intdiv_s(lua_State *L, int mode)
+static int z__intdiv(lua_State *L, int mode)
 {
-	static void (*divops[])(mpz_ptr, mpz_srcptr, mpz_srcptr) = {
-		mpz_cdiv_q, mpz_cdiv_r,
-		mpz_fdiv_q, mpz_fdiv_r,
-		mpz_tdiv_q, mpz_tdiv_r,
-		mpz_divexact
+	static void (*ops1[])(mpz_ptr, mpz_srcptr, mpz_srcptr) = {
+		mpz_cdiv_q, mpz_fdiv_q, mpz_tdiv_q,
+		mpz_cdiv_r, mpz_fdiv_r, mpz_tdiv_r,
 	};
-	mpz_ptr a, b, c;
-
-	z__checkops(L, 2);
-	a = _checkmpz(L, 1);
-	b = _tompz(L, 2);
-	c = _tompz(L, 3);
-	_check_divisor(L, c);
-	(*divops[mode])(a, b, c);
-	lua_settop(L, 1);
-	return 1;
-}
-
-static int z__intdiv_d(lua_State *L, int mode)
-{
-	static void (*divops[])(mpz_ptr, mpz_ptr, mpz_srcptr, mpz_srcptr) = {
+	static void (*ops2[])(mpz_ptr, mpz_ptr, mpz_srcptr, mpz_srcptr) = {
 		mpz_cdiv_qr, mpz_fdiv_qr, mpz_tdiv_qr
 	};
-	mpz_ptr a, b, c, d;
+	mpz_ptr q, r, a, b;
 
-	switch (lua_gettop(L)) {
-		case 2:
-			z_new(L);
-			lua_insert(L, 1);
-			/* fallthrough */
-		case 3:
-			z_new(L);
-			lua_insert(L, 2);
-		case 4:
-			break;
-		default:
-			luaL_error(L, "wrong number of arguments");
+	q = _checkmpz(L, 1);
+	a = _tompz(L, 2);
+	b = _tompz(L, 3);
+	_check_divisor(L, b);
+	if (mode > 5) {
+		r = _checkmpz(L, 4);
+		(*ops2[mode-6])(q, r, a, b);
+		lua_rotate(L, 2, -2);
+		lua_settop(L, 2);
+		return 2;
+	} else {
+		(*ops1[mode])(q, a, b);
+		lua_settop(L, 1);
+		return 1;
 	}
-	a = _checkmpz(L, 1);
-	b = _checkmpz(L, 2);
-	c = _tompz(L, 3);
-	d = _tompz(L, 4);
-	_check_divisor(L, d);
-	(*divops[mode])(a, b, c, d);
-	lua_settop(L, 2);
-	return 2;
 }
 
 static int z_intdiv(lua_State *L)
@@ -394,57 +357,45 @@ static int z_intdiv(lua_State *L)
 	const char *modestr;
 	int mode;
 
-	if (lua_type(L, -1) == LUA_TSTRING) {
-		modestr = luaL_checkstring(L, -1);
-	} else {
-try_default:
-		switch (lua_gettop(L)) {
-			case 2:
-			case 3:
-				modestr = lua_pushliteral(L, "fq");
-				break;
-			case 4:
-				modestr = lua_pushliteral(L, "fqr");
-				break;
-			default:
-				return luaL_error(L, "wrong number of arguments");
-		}
+	if (!lua_isstring(L, 2)) {
+no_modestr:
+		return lua_isnone(L, 4)
+			? z__intdiv(L, 1)	/* fq */
+			: z__intdiv(L, 7);	/* fqr */
 	}
-
-	if (strcmp(modestr, "exact") == 0) {
-		mode = 6;
-		goto mode_parse_end;
-	}
+	modestr = lua_tostring(L, 2);
+	/* try parsing modestr */
 	if (modestr[0] == 'c') {
 		mode = 0;
 	} else if (modestr[0] == 'f') {
-		mode = 2;
+		mode = 1;
 	} else if (modestr[0] == 't') {
-		mode = 4;
+		mode = 2;
 	} else {
-		/* modestr does not match a valid pattern.
-		 * maybe this is a number in string form?
-		 * (instead of a modestr) */
-		goto try_default;
+		/* not a valid modestr
+		 * maybe it is a number? */
+		goto no_modestr;
 	}
 	if (modestr[1] == 'q') {
 		if (modestr[2] == '\0') {
 			; /* ok */
 		} else if (modestr[2] == 'r' && modestr[3] == '\0') {
-			mode += 8;
+			mode += 6;
+		} else {
+			goto mode_error;
 		}
 	} else if (modestr[1] == 'r' && modestr[2] == '\0') {
-		mode += 1;
+		mode += 3;
 	} else {
-		luaL_argerror(L, -1, "mode must be one of: cq cr cqr fq fr fqr tq tr tqr exact");
+mode_error:
+		luaL_argerror(L, 2, "expect one of: cq cr cqr fq fr fqr tq tr tqr");
 	}
-mode_parse_end:
-	lua_pop(L, 1); /* remove modestr from stack */
-	return (mode < 8) ? z__intdiv_s(L, mode) : z__intdiv_d(L, mode/2 - 4);
+	lua_remove(L, 2);
+	return z__intdiv(L, mode);
 }
 
-static int z_fdiv_q(lua_State *L) { return z__intdiv_s(L, 2); }
-static int z_fdiv_r(lua_State *L) { return z__intdiv_s(L, 3); }
+static int z_fdiv_q(lua_State *L) { z_new(L); lua_insert(L, 1); return z__intdiv(L, 1); }
+static int z_fdiv_r(lua_State *L) { z_new(L); lua_insert(L, 1); return z__intdiv(L, 4); }
 
 #define PRED_DCL(op) \
 static int z_##op(lua_State *L) { lua_pushboolean(L, mpz_##op(_tompz(L, 1))); return 1; }
@@ -753,6 +704,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(submul),
 	METHOD(mul_2exp),
 	METHOD_ALIAS(div, intdiv),
+	METHOD(divexact),
 	METHOD(pow),
 	METHOD(sqrt),
 	METHOD(root),

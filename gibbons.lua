@@ -4,7 +4,7 @@ function pidigits()
   local q, r, t, u, i = z(1), z(180), z(60), z(168), 2
   local y1, y2 = z(), z()
   return function()
-    z.div(y1, y2, r, t, 'fqr')
+    y1:div(r, t, y2)
     y2: addmul(q, 5*i-2)
     r:  mul(u, 10)
     r:  mul(r, y2)
