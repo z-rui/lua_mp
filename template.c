@@ -201,29 +201,6 @@ static int $_tonumber(lua_State *L)
 	return 1;
 }
 
-static int $__cmp(lua_State *L)
-{
-	return mp$_cmp(_tomp$(L, 1), _tomp$(L, 2));
-}
-
-static int $_cmp(lua_State *L)
-{
-	lua_pushinteger(L, $__cmp(L));
-	return 1;
-}
-
-static int $_eq(lua_State *L)
-{
-	lua_pushboolean(L, $__cmp(L) == 0);
-	return 1;
-}
-
-static int $_lt(lua_State *L)
-{
-	lua_pushboolean(L, $__cmp(L) < 0);
-	return 1;
-}
-
 static int $_swap(lua_State *L)
 {
 	mp$_ptr a, b;
@@ -703,8 +680,8 @@ static const luaL_Reg $_Meta[] = {
 	METAMETHOD(add),
 	METAMETHOD(sub),
 	METAMETHOD(mul),
-	METAMETHOD(eq),
-	METAMETHOD(lt),
+	{ "__eq",	mp_eq	},
+	{ "__lt",	mp_lt	},
 #if defined(MPZ)
 	{ "__div",	q_div	},
 	METAMETHOD_ALIAS(idiv, fdiv_q),
@@ -733,7 +710,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(add),
 	METHOD(sub),
 	METHOD(mul),
-	METHOD(cmp),
+	{ "cmp",	mp_cmp	},
 #if defined(MPZ)
 	METHOD(addmul),
 	METHOD(submul),
