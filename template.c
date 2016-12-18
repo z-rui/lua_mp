@@ -257,10 +257,6 @@ static int $_neg_wrap(lua_State *L)
 	return $_neg(L);
 }
 
-OP_DCL(binop, add)
-OP_DCL(binop, sub)
-OP_DCL(binop, mul)
-
 #ifdef MPZ /* integer specific functions */
 OP_DCL(unop, nextprime)
 OP_DCL(unop, com)
@@ -269,6 +265,28 @@ OP_DCL(binop, lcm)
 OP_DCL(binop, and)
 OP_DCL(binop, ior)
 OP_DCL(binop, xor)
+
+static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), void (*fun_ui)(mp$_ptr, mp$_srcptr, unsigned long))
+{
+	lua_Integer val;
+	int isnum;
+
+	val = lua_tointegerx(L, 3, &isnum);
+	if (isnum && val > 0 && CAN_HOLD(unsigned long, val)) {
+		(*fun_ui)(_checkmp$(L, 1), _tomp$(L, 2), val);
+	} else {
+		(*fun)(_checkmp$(L, 1), _tomp$(L, 2), _tomp$(L, 3));
+	}
+	lua_settop(L, 1);
+	return 1;
+}
+
+#define OP_BIN_UI(fun) \
+static int $_##fun(lua_State *L) { $__checkops(L, 2); return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
+
+OP_BIN_UI(add)
+OP_BIN_UI(sub)
+OP_BIN_UI(mul)
 
 static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
 {
@@ -294,20 +312,11 @@ static int z_sizeinbase(lua_State *L)
 	return 1;
 }
 
-static int $_ternop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
-{
-	int top;
+#define OP_TERN_UI(fun) \
+static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
 
-	top = lua_gettop(L);
-	if (top != 3)
-		luaL_error(L, "too %s arguments", (top > 3) ? "many" : "few");
-	(*op)(_checkmp$(L, 1), _tomp$(L, 2), _tomp$(L, 3));
-	lua_settop(L, 1);
-	return 1;
-}
-
-OP_DCL(ternop, addmul)
-OP_DCL(ternop, submul)
+OP_TERN_UI(addmul)
+OP_TERN_UI(submul)
 
 static int q_div(lua_State *L);
 
@@ -602,6 +611,10 @@ static int z_sqrt(lua_State *L)
 }
 #endif
 #ifdef MPQ /* rational specfic functions */
+OP_DCL(binop, add)
+OP_DCL(binop, sub)
+OP_DCL(binop, mul)
+
 static int q_inv(lua_State *L)
 {
 	mpq_ptr q, r;

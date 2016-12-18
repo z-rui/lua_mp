@@ -3,11 +3,10 @@ function pidigits()
 
   local q, r, t, u, i = z(1), z(180), z(60), z(168), 2
   local y1, y2 = z(), z()
-  local _10 = z(10)
   return function()
     z.div(y1, y2, r, t, 'fqr')
-    y2: addmul(5*i-2, q)
-    r:  mul(_10, u)
+    y2: addmul(q, 5*i-2)
+    r:  mul(u, 10)
     r:  mul(r, y2)
     -- r = 10 * u * (q * (5*i-2) + r - y*t)
     q:  mul(q, i)
