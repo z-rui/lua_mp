@@ -492,19 +492,16 @@ static int z_fac(lua_State *L)
 	mpz_ptr z;
 	lua_Integer n, m;
 
-	if (luaL_testudata(L, 1, "mpz_t") == NULL) {
+	if ((z = luaL_testudata(L, 1, "mpz_t")) == NULL) {
 		z = z_new(L);
 		lua_insert(L, 1);
-	} else {
-		z = _checkmpz(L, 1);
 	}
 	n = luaL_checkinteger(L, 2);
-	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "n overflow");
-	if (lua_type(L, 3) != LUA_TNONE)
-		m = luaL_checkinteger(L, 3);
-	else
+	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "integer overflow");
+	if (lua_isnone(L, 3))
 		goto simple;
-	luaL_argcheck(L, CAN_HOLD(unsigned long, m), 3, "m overflow");
+	m = luaL_checkinteger(L, 3);
+	luaL_argcheck(L, CAN_HOLD(unsigned long, m), 3, "integer overflow");
 	switch (m) {
 		case 1:
 simple:
