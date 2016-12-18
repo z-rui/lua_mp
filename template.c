@@ -19,7 +19,7 @@ static void $__set_str(lua_State *L, mp$_ptr z, const char *s, int base)
 	}
 }
 
-static mp$_ptr $_check(lua_State *L, int i)
+static mp$_ptr _checkmp$(lua_State *L, int i)
 {
 	void *z;
 
@@ -90,7 +90,7 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 	}
 }
 
-static mp$_ptr $_get(lua_State *L, int i)
+static mp$_ptr _tomp$(lua_State *L, int i)
 {
 	mp$_ptr z;
 
@@ -142,7 +142,7 @@ static int $_tostring(lua_State *L)	/** tostring(x) */
 	size_t sz;
 	char *s;
 
-	z = $_check(L, 1);
+	z = _checkmp$(L, 1);
 	base = _check_outbase(L, 2);
 #if defined(MPZ)
 	sz = mpz_sizeinbase(z, abs(base)) + 2;
@@ -162,7 +162,7 @@ static int $_tonumber(lua_State *L)
 	mp$_ptr z;
 	double val;
 
-	z = $_check(L, 1);
+	z = _checkmp$(L, 1);
 #ifdef MPZ
 	/* FIXME 'signed long' maybe shorter than 'lua_Integer' */
 	if (mpz_fits_slong_p(z)) {
@@ -180,7 +180,7 @@ static int $_tonumber(lua_State *L)
 
 static int $__cmp(lua_State *L)
 {
-	return mp$_cmp($_get(L, 1), $_get(L, 2));
+	return mp$_cmp(_tomp$(L, 1), _tomp$(L, 2));
 }
 
 static int $_cmp(lua_State *L)
@@ -205,8 +205,8 @@ static int $_swap(lua_State *L)
 {
 	mp$_ptr a, b;
 
-	a = $_check(L, 1);
-	b = $_check(L, 2);
+	a = _checkmp$(L, 1);
+	b = _checkmp$(L, 2);
 	mp$_swap(a, b);
 	return 0;
 }
@@ -230,7 +230,7 @@ static void $__checkops(lua_State *L, int ops)
 static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 {
 	$__checkops(L, 1);
-	(*op)($_check(L, 1), $_get(L, 2));
+	(*op)(_checkmp$(L, 1), _tomp$(L, 2));
 	lua_settop(L, 1);
 	return 1;
 }
@@ -238,7 +238,7 @@ static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 static int $_binop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 {
 	$__checkops(L, 2);
-	(*op)($_check(L, 1), $_get(L, 2), $_get(L, 3));
+	(*op)(_checkmp$(L, 1), _tomp$(L, 2), _tomp$(L, 3));
 	lua_settop(L, 1);
 	return 1;
 }
@@ -288,7 +288,7 @@ static int z_sizeinbase(lua_State *L)
 	mpz_ptr z;
 	lua_Integer base;
 
-	z = z_get(L, 1);
+	z = _tompz(L, 1);
 	base = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, 2 <= base && base <= 62, 2, "base must be between 2 and 62");
 	lua_pushinteger(L, mpz_sizeinbase(z, base));
@@ -302,7 +302,7 @@ static int $_ternop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 	top = lua_gettop(L);
 	if (top != 3)
 		luaL_error(L, "too %s arguments", (top > 3) ? "many" : "few");
-	(*op)($_check(L, 1), $_get(L, 2), $_get(L, 3));
+	(*op)(_checkmp$(L, 1), _tomp$(L, 2), _tomp$(L, 3));
 	lua_settop(L, 1);
 	return 1;
 }
@@ -321,9 +321,9 @@ static int z__intdiv_s(lua_State *L, int mode)
 	mpz_ptr a, b, c;
 
 	z__checkops(L, 2);
-	a = z_check(L, 1);
-	b = z_get(L, 2);
-	c = z_get(L, 3);
+	a = _checkmpz(L, 1);
+	b = _tompz(L, 2);
+	c = _tompz(L, 3);
 	_check_divisor(L, c);
 	(*divops[mode])(a, b, c);
 	lua_settop(L, 1);
@@ -350,10 +350,10 @@ static int z__intdiv_d(lua_State *L, int mode)
 		default:
 			luaL_error(L, "wrong number of arguments");
 	}
-	a = z_check(L, 1);
-	b = z_check(L, 2);
-	c = z_get(L, 3);
-	d = z_get(L, 4);
+	a = _checkmpz(L, 1);
+	b = _checkmpz(L, 2);
+	c = _tompz(L, 3);
+	d = _tompz(L, 4);
 	_check_divisor(L, d);
 	(*divops[mode])(a, b, c, d);
 	lua_settop(L, 2);
@@ -426,8 +426,8 @@ static int z_ratdiv(lua_State *L)
 	mpz_ptr b, c;
 
 	a = q_new(L);
-	b = z_get(L, 1);
-	c = z_get(L, 2);
+	b = _tompz(L, 1);
+	c = _tompz(L, 2);
 	_check_divisor(L, c);
 	mpz_set(mpq_numref(a), b);
 	mpz_set(mpq_denref(a), c);
@@ -436,7 +436,7 @@ static int z_ratdiv(lua_State *L)
 }
 
 #define PRED_DCL(op) \
-static int z_##op(lua_State *L) { lua_pushboolean(L, mpz_##op(z_get(L, 1))); return 1; }
+static int z_##op(lua_State *L) { lua_pushboolean(L, mpz_##op(_tompz(L, 1))); return 1; }
 
 PRED_DCL(odd_p)
 PRED_DCL(even_p)
@@ -445,13 +445,13 @@ PRED_DCL(perfect_square_p)
 
 static int z_probab_prime_p(lua_State *L)
 {
-	lua_pushboolean(L, mpz_probab_prime_p(z_get(L, 1), luaL_checkinteger(L, 2)));
+	lua_pushboolean(L, mpz_probab_prime_p(_tompz(L, 1), luaL_checkinteger(L, 2)));
 	return 1;
 }
 
 static int z_divisible_p(lua_State *L)
 {
-	lua_pushboolean(L, mpz_divisible_p(z_get(L, 1), z_get(L, 2)));
+	lua_pushboolean(L, mpz_divisible_p(_tompz(L, 1), _tompz(L, 2)));
 	return 1;
 }
 
@@ -459,11 +459,11 @@ static int z_gcdext(lua_State *L)
 {
 	mpz_ptr a, b, s, t, g;
 
-	g = z_check(L, 1);
-	s = (lua_type(L, 2) == LUA_TNIL) ? NULL : z_check(L, 2);
-	t = (lua_type(L, 3) == LUA_TNIL) ? NULL : z_check(L, 3);
-	a = z_get(L, 4);
-	b = z_get(L, 5);
+	g = _checkmpz(L, 1);
+	s = (lua_type(L, 2) == LUA_TNIL) ? NULL : _checkmpz(L, 2);
+	t = (lua_type(L, 3) == LUA_TNIL) ? NULL : _checkmpz(L, 3);
+	a = _tompz(L, 4);
+	b = _tompz(L, 5);
 	mpz_gcdext(g, s, t, a, b);
 	lua_settop(L, 3);
 	return 3;
@@ -478,7 +478,7 @@ static int z_fac(lua_State *L)
 		z = z_new(L);
 		lua_insert(L, 1);
 	} else {
-		z = z_check(L, 1);
+		z = _checkmpz(L, 1);
 	}
 	n = luaL_checkinteger(L, 2);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "n overflow");
@@ -509,8 +509,8 @@ static int z_bin(lua_State *L)
 	lua_Integer k;
 
 	z__checkops(L, 2);
-	z = z_check(L, 1);
-	n = z_get(L, 2);
+	z = _checkmpz(L, 1);
+	n = _tompz(L, 2);
 	k = luaL_checkinteger(L, 3);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, k), 3, "k overflow");
 	mpz_bin_ui(z, n, k);
@@ -529,15 +529,15 @@ static int z_fib(lua_State *L)
 			lua_insert(L, 1);
 			/* fallthrough */
 		case 2:
-			z = z_check(L, 1);
+			z = _checkmpz(L, 1);
 			n = luaL_checkinteger(L, 2);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 2, "n overflow");
 			mpz_fib_ui(z, n);
 			lua_settop(L, 1);
 			return 1;
 		case 3:
-			z = z_check(L, 1);
-			z1 = z_check(L, 2);
+			z = _checkmpz(L, 1);
+			z1 = _checkmpz(L, 2);
 			n = luaL_checkinteger(L, 3);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "n overflow");
 			mpz_fib2_ui(z, z1, n);
@@ -553,10 +553,10 @@ static int z_pow(lua_State *L)
 	lua_Integer exp;
 
 	z__checkops(L, 2);
-	base = z_get(L, 2);
+	base = _tompz(L, 2);
 	exp = luaL_checkinteger(L, 3);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, exp), 3, "exp overflow");
-	mpz_pow_ui(z_check(L, 1), base, exp);
+	mpz_pow_ui(_checkmpz(L, 1), base, exp);
 	lua_settop(L, 1);
 	return 1;
 }
@@ -572,17 +572,17 @@ static int z_root(lua_State *L)
 			lua_insert(L, 1);
 			/* fallthrough */
 		case 3:
-			root = z_check(L, 1);
-			z = z_get(L, 2);
+			root = _checkmpz(L, 1);
+			z = _tompz(L, 2);
 			n = luaL_checkinteger(L, 3);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 3, "n overflow");
 			mpz_root(root, z, n);
 			lua_settop(L, 1);
 			return 1;
 		case 4:
-			root = z_check(L, 1);
-			rem = z_check(L, 2);
-			z = z_get(L, 3);
+			root = _checkmpz(L, 1);
+			rem = _checkmpz(L, 2);
+			z = _tompz(L, 3);
 			n = luaL_checkinteger(L, 4);
 			luaL_argcheck(L, CAN_HOLD(unsigned long, n), 4, "n overflow");
 			mpz_rootrem(root, rem, z, n);
@@ -602,15 +602,15 @@ static int z_sqrt(lua_State *L)
 			lua_insert(L, 1);
 			/* fallthrough */
 		case 2:
-			root = z_check(L, 1);
-			z = z_get(L, 2);
+			root = _checkmpz(L, 1);
+			z = _tompz(L, 2);
 			mpz_sqrt(root, z);
 			lua_settop(L, 1);
 			return 1;
 		case 3:
-			root = z_check(L, 1);
-			rem = z_check(L, 2);
-			z = z_get(L, 3);
+			root = _checkmpz(L, 1);
+			rem = _checkmpz(L, 2);
+			z = _tompz(L, 3);
 			mpz_sqrtrem(root, rem, z);
 			lua_settop(L, 2);
 			return 2;
@@ -624,8 +624,8 @@ static int q_inv(lua_State *L)
 	mpq_ptr q, r;
 
 	q__checkops(L, 1);
-	q = q_check(L, 1);
-	r = q_get(L, 2);
+	q = _checkmpq(L, 1);
+	r = _tompq(L, 2);
 	_check_divisor(L, mpq_numref(q));
 	mpq_inv(q, r);
 	lua_settop(L, 1);
@@ -637,9 +637,9 @@ static int q_div(lua_State *L)
 	mpq_ptr a, b, c;
 
 	q__checkops(L, 2);
-	a = q_check(L, 1);
-	b = q_get(L, 2);
-	c = q_get(L, 3);
+	a = _checkmpq(L, 1);
+	b = _tompq(L, 2);
+	c = _tompq(L, 3);
 	_check_divisor(L, mpq_numref(c));
 	mpq_div(a, b, c);
 	lua_settop(L, 1);
@@ -650,7 +650,7 @@ static int q_canonicalize(lua_State *L)
 {
 	mpq_ptr q;
 
-	q = q_check(L, 1);
+	q = _checkmpq(L, 1);
 	_check_divisor(L, mpq_denref(q));
 	if (lua_type(L, 2) == LUA_TBOOLEAN && !lua_toboolean(L, 2)) {
 		/* only fix the sign of denominator, */
@@ -670,7 +670,7 @@ static int q_numref(lua_State *L)
 {
 	mpq_ptr q;
 
-	q = q_check(L, 1);
+	q = _checkmpq(L, 1);
 	return z__partial_ref(L, 1, mpq_numref(q));
 }
 
@@ -678,7 +678,7 @@ static int q_denref(lua_State *L)
 {
 	mpq_ptr q;
 
-	q = q_check(L, 1);
+	q = _checkmpq(L, 1);
 	return z__partial_ref(L, 1, mpq_denref(q));
 }
 #endif
