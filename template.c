@@ -71,15 +71,25 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 #endif
 			} else if ((p = luaL_testudata(L, i, "mpq_t")) != 0) {
 #if defined(MPZ)
-				luaL_argcheck(L, mpz_sgn(mpq_denref((mpq_ptr) p)) > 0, i, "non-canonicalized rational");
-				mpz_set_q(z, p);
+				mpz_ptr num, den;
+
+				num = mpq_numref((mpq_ptr) p);
+				den = mpq_denref((mpq_ptr) p);
+				if (mpz_sgn(den) != 0 && mpz_divisible_p(num, den)) {
+					mpz_divexact(z, num, den);
+				} else {
+					goto error;
+				}
 #elif defined(MPQ)
 				mpq_set(z, p);
 #endif
+			} else {
+				goto error;
 			}
 			break;
 		}
 		default:
+error:
 			_conversion_error(L, luaL_typename(L, i),
 #if defined(MPZ)
 				"integer"
