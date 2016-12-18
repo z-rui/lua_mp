@@ -48,6 +48,24 @@ static int _open_common(lua_State *L)
 	return 1;
 }
 
+static int _check_outbase(lua_State *L, int i)
+{
+	lua_Integer base;
+
+	base = luaL_optinteger(L, i, 10);
+	luaL_argcheck(L, (-36 <= base && base <= -2) || (2 <= base && base <= 62), i, "base not in range [-36,-2] and [2,62]");
+	return (int) base;
+}
+
+static int _check_inbase(lua_State *L, int i)
+{
+	lua_Integer base;
+
+	base = luaL_optinteger(L, i, 0);
+	luaL_argcheck(L, base == 0 || (2 <= base && base <= 62), 2, "base neither 0 nor in range [2,62]");
+	return (int) base;
+}
+
 #include "mpz.c"
 #include "mpq.c"
 

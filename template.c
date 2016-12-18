@@ -78,8 +78,6 @@ replace_and_return:
 
 static int $_call(lua_State *L)
 {
-	lua_Integer base;
-
 	lua_remove(L, 1); /* self */
 	switch (lua_gettop(L)) {
 	case 0:
@@ -89,9 +87,7 @@ static int $_call(lua_State *L)
 		$_get(L, 1);
 		break;
 	case 2:
-		base = luaL_checkinteger(L, 2);
-		luaL_argcheck(L, base == 0 || (2 <= base && base <= 62), 2, "base neither 0 nor in range [2,62]");
-		$__fromstring(L, luaL_checkstring(L, 1), (int) base);
+		$__fromstring(L, luaL_checkstring(L, 1), _check_inbase(L, 2));
 		break;
 	default:
 		return luaL_error(L, "too many arguments");
@@ -112,15 +108,13 @@ static int $_gc(lua_State *L)
 static int $_tostring(lua_State *L)	/** tostring(x) */
 {
 	mp$_ptr z;
-	lua_Integer base;
+	int base;
 	luaL_Buffer B;
 	size_t sz;
 	char *s;
 
 	z = luaL_checkudata(L, 1, "mp$_t");
-	base = luaL_optinteger(L, 2, 10);
-	luaL_argcheck(L, (-36 <= base && base <= -2) || (2 <= base && base <= 62), 2, "base not in range [-36,-2] and [2,62]");
-
+	base = _check_outbase(L, 2);
 #if defined(MPZ)
 	sz = mpz_sizeinbase(z, abs(base)) + 2;
 #elif defined(MPQ)
