@@ -249,7 +249,6 @@ OP_DCL(unop, neg)
 #ifdef MPZ /* integer specific functions */
 OP_DCL(unop, nextprime)
 OP_DCL(unop, com)
-OP_DCL(binop, lcm)
 OP_DCL(binop, and)
 OP_DCL(binop, ior)
 OP_DCL(binop, xor)
@@ -279,6 +278,7 @@ OP_BIN_UI(add)
 OP_BIN_UI(sub)
 OP_BIN_UI(mul)
 OP_BIN_UI(divexact)
+OP_BIN_UI(lcm)
 
 static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
 {
