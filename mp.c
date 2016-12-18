@@ -22,12 +22,12 @@
 
 #define CAN_HOLD(type, val) ((type) (val) == (val))
 
-static void _conversion_error(lua_State *L, const char *typ, int base)
+static void _conversion_error(lua_State *L, const char *srctyp, const char *typ, int base)
 {
 	if (base)
-		luaL_error(L, "cannot convert string to %s in base %d", typ, base);
+		luaL_error(L, "cannot convert %s to %s in base %d", srctyp, typ, base);
 	else
-		luaL_error(L, "cannot convert string to %s", typ);
+		luaL_error(L, "cannot convert %s to %s", srctyp, typ);
 }
 
 static void _check_divisor(lua_State *L, mpz_ptr divisor)

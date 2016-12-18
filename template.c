@@ -12,9 +12,9 @@ static void $__set_str(lua_State *L, mp$_ptr z, const char *s, int base)
 {
 	if (mp$_set_str(z, s, base) != 0) {
 #if defined(MPZ)
-		_conversion_error(L, "integer", base);
+		_conversion_error(L, "string", "integer", base);
 #elif defined(MPQ)
-		_conversion_error(L, "rational", base);
+		_conversion_error(L, "string", "rational", base);
 #endif
 	}
 }
@@ -80,14 +80,13 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 			break;
 		}
 		default:
-			luaL_error(L, "cannot convert %s to %s",
-				luaL_typename(L, i),
+			_conversion_error(L, luaL_typename(L, i),
 #if defined(MPZ)
-				"mpz_t"
+				"integer"
 #elif defined(MPQ)
-				"mpq_t"
+				"rational"
 #endif
-			);
+			, 0);
 	}
 }
 
