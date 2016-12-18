@@ -228,9 +228,21 @@ static void $__checkops(lua_State *L, int ops)
 	}
 }
 
+static void $__fixmeta(lua_State *L)
+{
+	lua_Debug ar;
+
+	lua_getstack(L, 0, &ar);
+	lua_getinfo(L, "n", &ar);
+	if (strcmp(ar.namewhat, "metamethod") == 0) {
+		$_new(L);
+		lua_insert(L, 1);
+	}
+}
+
 static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 {
-	$__checkops(L, 1);
+	$__fixmeta(L);
 	(*op)(_checkmp$(L, 1), _tomp$(L, 2));
 	lua_settop(L, 1);
 	return 1;
@@ -238,7 +250,7 @@ static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 
 static int $_binop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 {
-	$__checkops(L, 2);
+	$__fixmeta(L);
 	(*op)(_checkmp$(L, 1), _tomp$(L, 2), _tomp$(L, 3));
 	lua_settop(L, 1);
 	return 1;
@@ -249,14 +261,6 @@ static int $_##fun(lua_State *L) { return $_##typ(L, mp$_##fun); }
 
 OP_DCL(unop, abs)
 OP_DCL(unop, neg)
-/* Pitfall here! */
-/* Lua's __unm takes an additional argument,
- * behaving like a binary op */
-static int $_neg_wrap(lua_State *L)
-{
-	lua_settop(L, 1);
-	return $_neg(L);
-}
 
 #ifdef MPZ /* integer specific functions */
 OP_DCL(unop, nextprime)
@@ -282,7 +286,7 @@ static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), vo
 }
 
 #define OP_BIN_UI(fun) \
-static int $_##fun(lua_State *L) { $__checkops(L, 2); return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
+static int $_##fun(lua_State *L) { $__fixmeta(L); return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
 
 OP_BIN_UI(add)
 OP_BIN_UI(sub)
@@ -323,7 +327,7 @@ static int z_mul_2exp(lua_State *L)
 	mpz_ptr a, b;
 	lua_Integer n;
 
-	z__checkops(L, 2);
+	z__fixmeta(L);
 	a = _checkmpz(L, 1);
 	b = _tompz(L, 2);
 	n = luaL_checkinteger(L, 3);
@@ -651,7 +655,7 @@ static int q_div(lua_State *L)
 {
 	mpq_ptr a, b, c;
 
-	q__checkops(L, 2);
+	q__fixmeta(L);
 	a = _checkmpq(L, 1);
 	b = _tompq(L, 2);
 	c = _tompq(L, 3);
@@ -708,7 +712,7 @@ static int q_denref(lua_State *L)
 static const luaL_Reg $_Meta[] = {
 	METAMETHOD(gc),
 	METAMETHOD(tostring),
-	METAMETHOD_ALIAS(unm, neg_wrap),
+	METAMETHOD_ALIAS(unm, neg),
 	METAMETHOD(add),
 	METAMETHOD(sub),
 	METAMETHOD(mul),
