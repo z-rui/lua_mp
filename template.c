@@ -256,14 +256,17 @@ OP_DCL(binop, xor)
 
 static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), void (*fun_ui)(mp$_ptr, mp$_srcptr, unsigned long))
 {
+	mp$_ptr r, a;
 	lua_Integer val;
 	int isnum;
 
+	r = _checkmp$(L, 1);
+	a = _tomp$(L, 2);
 	val = lua_tointegerx(L, 3, &isnum);
 	if (isnum && val > 0 && CAN_HOLD(unsigned long, val)) {
-		(*fun_ui)(_checkmp$(L, 1), _tomp$(L, 2), val);
+		(*fun_ui)(r, a, val);
 	} else {
-		(*fun)(_checkmp$(L, 1), _tomp$(L, 2), _tomp$(L, 3));
+		(*fun)(r, a, _tomp$(L, 3));
 	}
 	lua_settop(L, 1);
 	return 1;
@@ -490,7 +493,7 @@ static int z_fib(lua_State *L)
 	} else {
 		z1 = _checkmpz(L, 3);
 		mpz_fib2_ui(z, z1, n);
-		lua_remove(L, 2);
+		lua_rotate(L, 2, -1);
 		lua_settop(L, 2);
 		return 2;
 	}
@@ -573,7 +576,7 @@ static int z_sqrt(lua_State *L)
 	} else {
 		rem = _checkmpz(L, 3);
 		mpz_sqrtrem(root, rem, z);
-		lua_remove(L, 2);
+		lua_rotate(L, 2, -1);
 		lua_settop(L, 2);
 		return 2;
 	}
