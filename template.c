@@ -94,12 +94,15 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 {
 	mp$_ptr z;
 
-	if ((z = luaL_testudata(L, i, "mp$_t")) != 0) {
-		return z;
+	if ((z = luaL_testudata(L, i, "mp$_t")) == 0) {
+		z = $_new(L);
+		$__set(L, i, z);
+		lua_replace(L, i);
 	}
-	z = $_new(L);
-	$__set(L, i, z);
-	lua_replace(L, i);
+#ifdef MPQ
+	/* sanity check to prevent fp exception */
+	luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
+#endif
 	return z;
 }
 
