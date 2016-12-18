@@ -554,6 +554,37 @@ static int z_fib(lua_State *L)
 	return luaL_error(L, "wrong number of arguments");
 }
 
+static int z_invert(lua_State *L)
+{
+	mpz_ptr r, a, b;
+
+	z__checkops(L, 2);
+	r = _checkmpz(L, 1);
+	a = _tompz(L, 2);
+	b = _tompz(L, 3);
+	if (mpz_invert(r, a, b) == 0) {
+		return luaL_error(L, "inverse does not exist");
+	}
+	lua_settop(L, 1);
+	return 1;
+}
+
+static int z_powm(lua_State *L)
+{
+	mpz_ptr r, a, b, c;
+
+	z__checkops(L, 3);
+	r = _checkmpz(L, 1);
+	a = _tompz(L, 2);
+	b = _tompz(L, 3);
+	c = _tompz(L, 4);
+	luaL_argcheck(L, mpz_sgn(b) >= 0, 3, "expect non-negative");
+
+	mpz_powm(r, a, b, c);
+	lua_settop(L, 1);
+	return 1;
+}
+
 static int z_pow(lua_State *L)
 {
 	mpz_ptr base;
@@ -757,6 +788,8 @@ static const luaL_Reg $_Reg[] =
 	METHOD(fac),
 	METHOD(bin),
 	METHOD(fib),
+	METHOD(invert),
+	METHOD(powm),
 
 	METHOD_ALIAS(band, and),
 	METHOD_ALIAS(bor, ior),
