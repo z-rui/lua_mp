@@ -653,8 +653,7 @@ static int q_set_den(lua_State *L) { return q__set_part(L, mpq_set_den); }
 	{ "__"#name,	$_##fun	}
 #define METAMETHOD(name) METAMETHOD_ALIAS(name, name)
 
-static const luaL_Reg $_Reg[] =
-{
+static const luaL_Reg $_Meta[] = {
 	METAMETHOD(gc),
 	METAMETHOD(tostring),
 	METAMETHOD_ALIAS(unm, neg_wrap),
@@ -678,6 +677,11 @@ static const luaL_Reg $_Reg[] =
 	METAMETHOD(bxor),
 	METAMETHOD(bnot),
 #endif
+	{ NULL,		NULL	}
+};
+
+static const luaL_Reg $_Reg[] =
+{
 	METHOD(tostring),
 
 	METHOD(set),
@@ -733,7 +737,8 @@ LUALIB_API int luaopen_mp_$(lua_State *L)
 {
 	lua_pushcfunction(L, $_call);
 	luaL_newmetatable(L, "mp$_t");
-	luaL_setfuncs(L, $_Reg, 0);
+	luaL_setfuncs(L, $_Meta, 0);
+	luaL_newlib(L, $_Reg);
 
 	return _open_common(L);
 }
