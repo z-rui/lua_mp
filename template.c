@@ -418,7 +418,6 @@ static int z_ratdiv(lua_State *L)
 	mpz_set(mpq_numref(a), b);
 	mpz_set(mpq_denref(a), c);
 	mpq_canonicalize(a);
-	lua_settop(L, 1);
 	return 1;
 }
 
