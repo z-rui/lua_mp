@@ -143,6 +143,27 @@ static int $_tostring(lua_State *L)	/** tostring(x) */
 	return 1;
 }
 
+static int $_tonumber(lua_State *L)
+{
+	mp$_ptr z;
+	double val;
+
+	z = $_check(L, 1);
+#ifdef MPZ
+	/* FIXME 'signed long' maybe shorter than 'lua_Integer' */
+	if (mpz_fits_slong_p(z)) {
+		long val;
+
+		val = mpz_get_si(z);
+		lua_pushinteger(L, val);
+		return 1;
+	}
+#endif
+	val = mp$_get_d(z);
+	lua_pushnumber(L, val);
+	return 1;
+}
+
 static int $__cmp(lua_State *L)
 {
 	return mp$_cmp($_get(L, 1), $_get(L, 2));
@@ -683,6 +704,7 @@ static const luaL_Reg $_Meta[] = {
 static const luaL_Reg $_Reg[] =
 {
 	METHOD(tostring),
+	METHOD(tonumber),
 
 	METHOD(set),
 	METHOD(swap),
