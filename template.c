@@ -25,7 +25,17 @@ static mp$_ptr $__fromstring(lua_State *L, const char *s, int base)
 
 static mp$_ptr $_check(lua_State *L, int i)
 {
-	return luaL_checkudata(L, i, "mp$_t");
+	void *z;
+
+	z = luaL_checkudata(L, i, "mp$_t");
+#ifdef MPZ
+	if (lua_getuservalue(L, i) == LUA_TUSERDATA) {
+		/* partial ref */
+		z = *(mp$_ptr *) z;
+	}
+	lua_pop(L, 1);
+#endif
+	return (mp$_ptr) z;
 }
 
 static mp$_ptr $_get(lua_State *L, int i)
@@ -225,6 +235,18 @@ OP_DCL(binop, lcm)
 OP_DCL(binop, and)
 OP_DCL(binop, ior)
 OP_DCL(binop, xor)
+
+static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
+{
+	mpz_ptr *p = lua_newuserdata(L, sizeof (mpz_ptr));
+	if (luaL_getmetatable(L, "mp$_t") == LUA_TNIL)
+		luaL_error(L, "mp$_t not registered");
+	*p = z;
+	lua_setmetatable(L, -2);
+	lua_pushvalue(L, i);
+	lua_setuservalue(L, -2);
+	return 1;
+}
 
 static int z_sizeinbase(lua_State *L)
 {
@@ -610,38 +632,21 @@ static int q_canonicalize(lua_State *L)
 	return 1;
 }
 
-/* looks like mpq_{num,den}ref() cannot be implmented in Lua */
-static int q__get_part(lua_State *L, void (*op)(mpz_ptr, mpq_srcptr))
+static int q_numref(lua_State *L)
 {
 	mpq_ptr q;
-	mpz_ptr z;
 
 	q = q_check(L, 1);
-	if (lua_type(L, 2) == LUA_TNONE) {
-		z = z_new(L);
-	} else {
-		z = z_check(L, 2);
-	}
-	(*op)(z, q);
-	return 1;
+	return z__partial_ref(L, 1, mpq_numref(q));
 }
 
-static int q_get_num(lua_State *L) { return q__get_part(L, mpq_get_num); }
-static int q_get_den(lua_State *L) { return q__get_part(L, mpq_get_den); }
-
-static int q__set_part(lua_State *L, void (*op)(mpq_ptr, mpz_srcptr))
+static int q_denref(lua_State *L)
 {
 	mpq_ptr q;
-	mpz_ptr z;
 
 	q = q_check(L, 1);
-	z = z_get(L, 2);
-	(*op)(q, z);
-	return 0;
+	return z__partial_ref(L, 1, mpq_denref(q));
 }
-
-static int q_set_num(lua_State *L) { return q__set_part(L, mpq_set_num); }
-static int q_set_den(lua_State *L) { return q__set_part(L, mpq_set_den); }
 #endif
 
 #define METHOD_ALIAS(name, fun) \
@@ -720,10 +725,8 @@ static const luaL_Reg $_Reg[] =
 #elif defined(MPQ)
 	METHOD(inv),
 	METHOD(canonicalize),
-	METHOD(get_num),
-	METHOD(set_num),
-	METHOD(get_den),
-	METHOD(set_den),
+	METHOD(numref),
+	METHOD(denref),
 #endif
 	{ NULL,		NULL	}
 };
