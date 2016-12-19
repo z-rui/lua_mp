@@ -529,6 +529,7 @@ static int z_pow(lua_State *L)
 	mpz_ptr z, base;
 	unsigned long exp;
 
+	z__fixmeta(L);
 	z = _checkmpz(L, 1);
 	base = _tompz(L, 2);
 	exp = _checkulong(L, 3);
