@@ -603,16 +603,7 @@ static int q_canonicalize(lua_State *L)
 
 	q = _checkmpq(L, 1, 1);
 	_check_divisor(L, mpq_denref(q));
-	if (lua_type(L, 2) == LUA_TBOOLEAN && !lua_toboolean(L, 2)) {
-		/* only fix the sign of denominator, */
-		if (mpz_sgn(mpq_denref(q)) < 0) {
-			mpz_neg(mpq_denref(q), mpq_denref(q));
-			mpz_neg(mpq_numref(q), mpq_numref(q));
-		}
-	} else {
-		/* do a full canonicalization */
-		mpq_canonicalize(q);
-	}
+	mpq_canonicalize(q);
 	lua_settop(L, 1);
 	return 1;
 }
