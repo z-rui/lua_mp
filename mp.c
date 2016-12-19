@@ -40,7 +40,7 @@ static unsigned long _checkulong(lua_State *L, int i)
 {
 	lua_Integer val;
 
-	val = luaL_checkinteger(L, 2);
+	val = luaL_checkinteger(L, i);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, val), i, "integer overflow");
 	return (unsigned long) val;
 }
