@@ -328,6 +328,31 @@ static int z_mul_2exp(lua_State *L)
 	return 1;
 }
 
+static int z_div_2exp(lua_State *L)
+{
+	static const char *lst[] = {
+		"cq", "fq", "tq",
+		"cr", "fr", "tr",
+	0};
+	static void (*ops[])(mpz_ptr, mpz_srcptr, mp_bitcnt_t) = {
+		mpz_cdiv_q_2exp, mpz_fdiv_q_2exp, mpz_tdiv_q_2exp,
+		mpz_cdiv_r_2exp, mpz_fdiv_r_2exp, mpz_tdiv_r_2exp,
+	};
+	int mode;
+	mpz_ptr r, a;
+	lua_Integer b;
+
+	z__fixmeta(L);
+	mode = luaL_checkoption(L, 4, "fq", lst);
+	r = _checkmpz(L, 1);
+	a = _tompz(L, 2);
+	b = luaL_checkinteger(L, 3);
+	luaL_argcheck(L, b >= 0, 3, "expect non-negative");
+	(*ops[mode])(r, a, b);
+	lua_settop(L, 1);
+	return 1;
+}
+
 static int q_div(lua_State *L);
 
 static int z__intdiv(lua_State *L, int mode)
@@ -672,6 +697,7 @@ static const luaL_Reg $_Meta[] = {
 	{ "__lt",	mp_lt	},
 #if defined(MPZ)
 	METAMETHOD_ALIAS(shl, mul_2exp),
+	METAMETHOD_ALIAS(shr, div_2exp),
 	{ "__div",	q_div	},
 	METAMETHOD_ALIAS(idiv, fdiv_q),
 	METAMETHOD_ALIAS(mod, fdiv_r),
@@ -704,6 +730,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(addmul),
 	METHOD(submul),
 	METHOD(mul_2exp),
+	METHOD(div_2exp),
 	METHOD_ALIAS(div, intdiv),
 	METHOD(divexact),
 	METHOD(pow),
