@@ -159,7 +159,12 @@ static int $_gc(lua_State *L)
 {
 	mp$_ptr z = luaL_checkudata(L, 1, "mp$_t");
 
-	mp$_clear(z);
+#if MPZ
+	if (lua_getuservalue(L, i) != LUA_TUSERDATA) {
+		/* not a partial ref */
+		mp$_clear(z);
+	}
+#endif
 	lua_pushnil(L);
 	lua_setmetatable(L, 1);
 	return 0;
