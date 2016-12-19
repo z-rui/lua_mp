@@ -411,12 +411,13 @@ static int z_gcdext(lua_State *L)
 	g = _checkmpz(L, 1, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
-	s = lua_isnone(L, 4) ? NULL : _checkmpz(L, 4, 1);
-	t = lua_isnone(L, 5) ? NULL : _checkmpz(L, 5, 1);
-	if (s)
-		mpz_gcdext(g, s, t, a, b);
-	else
+	if (lua_isnone(L, 4)) {
 		mpz_gcd(g, a, b);
+	} else {
+		s = _checkmpz(L, 4, 1);
+		t = lua_isnone(L, 5) ? NULL : _checkmpz(L, 5, 1);
+		mpz_gcdext(g, s, t, a, b);
+	}
 	lua_rotate(L, 2, -2);
 	lua_settop(L, top-2);
 	return top-2;
