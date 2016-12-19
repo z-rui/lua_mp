@@ -639,6 +639,38 @@ static int q_denref(lua_State *L)
 }
 #endif
 
+static int $_inp_str(lua_State *L)
+{
+	mp$_ptr z;
+	FILE *f;
+	int base;
+	size_t n;
+
+	z = _checkmp$(L, 1, 1);
+	f = _checkfile(L, 2);
+	base = _check_inbase(L, 3);
+
+	n = mp$_inp_str(z, f, base);
+	lua_pushinteger(L, (lua_Integer) n);
+	return 1;
+}
+
+static int $_out_str(lua_State *L)
+{
+	mp$_ptr z;
+	FILE *f;
+	int base;
+	size_t n;
+
+	z = _checkmp$(L, 1, 1);
+	f = _checkfile(L, 2);
+	base = _check_outbase(L, 3);
+
+	n = mp$_out_str(f, base, z);
+	lua_pushinteger(L, (lua_Integer) n);
+	return 1;
+}
+
 #define METHOD_ALIAS(name, fun) \
 	{ #name,	$_##fun	}
 #define METHOD(name) METHOD_ALIAS(name, name)
@@ -726,6 +758,8 @@ static const luaL_Reg $_Reg[] =
 	METHOD(numref),
 	METHOD(denref),
 #endif
+	METHOD(inp_str),
+	METHOD(out_str),
 	{ NULL,		NULL	}
 };
 

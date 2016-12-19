@@ -9,6 +9,7 @@
  * This code is hereby placed in the public domain.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -43,6 +44,16 @@ static unsigned long _checkulong(lua_State *L, int i)
 	val = luaL_checkinteger(L, i);
 	luaL_argcheck(L, CAN_HOLD(unsigned long, val), i, "integer overflow");
 	return (unsigned long) val;
+}
+
+static FILE *_checkfile(lua_State *L, int i)
+{
+	luaL_Stream *fs;
+
+	fs = luaL_checkudata(L, i, LUA_FILEHANDLE);
+	if (!fs->closef)
+		    luaL_error(L, "attempt to use a closed file");
+	return fs->f;
 }
 
 static int _open_common(lua_State *L)
