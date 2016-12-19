@@ -504,14 +504,27 @@ static int z_powm(lua_State *L)
 
 	r = _checkmpz(L, 1, 1);
 	a = _tompz(L, 2);
-	val = lua_tonumberx(L, 3, &isnum);
+	val = lua_tointegerx(L, 3, &isnum);
 	c = _tompz(L, 4);
 	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
 		mpz_powm_ui(r, a, val, c);
 	} else {
 		b = _tompz(L, 3);
-		luaL_argcheck(L, mpz_sgn(b) >= 0, 3, "expect non-negative");
-		mpz_powm(r, a, b, c);
+		if (mpz_sgn(b) < 0) {
+			mpz_t tmp;
+
+			mpz_init(tmp);
+			if (!mpz_invert(tmp, a, c)) {
+				mpz_clear(tmp);
+				luaL_error(L, "inverse does not exist");
+			}
+			mpz_neg(b, b);
+			mpz_powm(r, tmp, b, c);
+			mpz_neg(b, b);
+			mpz_clear(tmp);
+		} else {
+			mpz_powm(r, a, b, c);
+		}
 	}
 
 	lua_settop(L, 1);
