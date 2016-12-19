@@ -23,17 +23,15 @@ static mp$_ptr _checkmp$(lua_State *L, int i, int raise)
 {
 	void *z;
 
-	z = (raise) ? luaL_checkudata(L, i, "mp$_t")
-		    : luaL_testudata(L, i, "mp$_t");
 #ifdef MPZ
+	z = luaL_testudata(L, i, "mpz_t*");
 	if (z) {
-		if (lua_getuservalue(L, i) == LUA_TUSERDATA) {
-			/* partial ref */
-			z = *(mp$_ptr *) z;
-		}
-		lua_pop(L, 1);
+		/* partial ref */
+		return *(mp$_ptr *) z;
 	}
 #endif
+	z = (raise) ? luaL_checkudata(L, i, "mp$_t")
+		    : luaL_testudata(L, i, "mp$_t");
 	return (mp$_ptr) z;
 }
 
@@ -155,12 +153,7 @@ static int $_gc(lua_State *L)
 {
 	mp$_ptr z = luaL_checkudata(L, 1, "mp$_t");
 
-#if MPZ
-	if (lua_getuservalue(L, i) != LUA_TUSERDATA) {
-		/* not a partial ref */
-		mp$_clear(z);
-	}
-#endif
+	mp$_clear(z);
 	lua_pushnil(L);
 	lua_setmetatable(L, 1);
 	return 0;
@@ -287,8 +280,8 @@ OP_BIN_UI(lcm)
 static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
 {
 	mpz_ptr *p = lua_newuserdata(L, sizeof (mpz_ptr));
-	if (luaL_getmetatable(L, "mp$_t") == LUA_TNIL)
-		luaL_error(L, "mp$_t not registered");
+	if (luaL_getmetatable(L, "mp$_t*") == LUA_TNIL)
+		luaL_error(L, "mp$_t* not registered");
 	*p = z;
 	lua_setmetatable(L, -2);
 	lua_pushvalue(L, i);
@@ -648,6 +641,7 @@ static int q_denref(lua_State *L)
 #define METAMETHOD(name) METAMETHOD_ALIAS(name, name)
 
 static const luaL_Reg $_Meta[] = {
+	/* Note: keep __gc the first */
 	METAMETHOD(gc),
 	METAMETHOD(tostring),
 	METAMETHOD_ALIAS(unm, neg),
@@ -736,6 +730,21 @@ LUALIB_API int luaopen_mp_$(lua_State *L)
 	lua_pushboolean(L, 1);
 	luaL_setfuncs(L, $_Meta, 1);
 	luaL_newlib(L, $_Reg);
+#if MPZ
+	luaL_newmetatable(L, "mpz_t*");
+	/* copy from mpz_t to mpz_t* */
+	{
+		const luaL_Reg *r = &z_Meta[1]; /* skip __gc */
+		while (r->name) {
+			lua_getfield(L, -3, r->name);
+			lua_setfield(L, -2, r->name);
+			r++;
+		}
+	}
+	lua_pushvalue(L, -2);
+	lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
+#endif
 
 	return _open_common(L);
 }
