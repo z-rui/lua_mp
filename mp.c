@@ -77,6 +77,8 @@ static int _check_inbase(lua_State *L, int i)
 
 static mpz_ptr _tompz(lua_State *, int);
 static mpq_ptr _tompq(lua_State *, int);
+static mpz_ptr _checkmpz(lua_State *, int, int);
+static mpq_ptr _checkmpq(lua_State *, int, int);
 
 static int mp__cmp(lua_State *L)
 {
@@ -91,16 +93,16 @@ static int mp__cmp(lua_State *L)
 		si = val = lua_tointegerx(L, 2, &isint);
 		issi = isint && CAN_HOLD(long, val);
 	}
-	if ((a = luaL_testudata(L, 1, "mpq_t"))) {
+	if ((a = _checkmpq(L, 1, 0))) {
 		if (issi) {
 			ret = mpq_cmp_si((mpq_ptr) a, si, 1);
-		} else if ((b = luaL_testudata(L, 2, "mpz_t"))) {
+		} else if ((b = _checkmpz(L, 2, 0))) {
 			ret = mpq_cmp_z(a, b);
 		} else {
 			b = _tompq(L, 2);
 			ret = mpq_cmp(a, b);
 		}
-	} else if ((a = luaL_testudata(L, 1, "mpz_t")) != 0) {
+	} else if ((a = _checkmpz(L, 1, 0)) != 0) {
 		switch (tb) {
 			case LUA_TNUMBER:
 				if (issi) {
@@ -112,7 +114,7 @@ static int mp__cmp(lua_State *L)
 				}
 				break;
 			case LUA_TUSERDATA:
-				if ((b = luaL_testudata(L, 2, "mpq_t"))) {
+				if ((b = _checkmpq(L, 2, 0))) {
 					ret = -mpq_cmp_z(b, a);
 					break;
 				}
@@ -146,8 +148,8 @@ static int mp_lt(lua_State *L)
 static int mp_eq(lua_State *L)
 {
 	mpq_ptr a, b;
-	a = luaL_testudata(L, 1, "mpq_t");
-	if (a && (b = luaL_testudata(L, 2, "mpq_t"))) {
+	a = _checkmpq(L, 1, 0);
+	if (a && (b = _checkmpq(L, 2, 0))) {
 		lua_pushboolean(L, mpq_equal(a, b));
 	} else {
 		lua_pushboolean(L, mp__cmp(L) == 0);
