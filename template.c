@@ -258,7 +258,7 @@ static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), vo
 	r = _checkmp$(L, 1);
 	a = _tomp$(L, 2);
 	val = lua_tointegerx(L, 3, &isnum);
-	if (isnum && val > 0 && CAN_HOLD(unsigned long, val)) {
+	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
 		(*fun_ui)(r, a, val);
 	} else {
 		(*fun)(r, a, _tomp$(L, 3));
