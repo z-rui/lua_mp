@@ -110,6 +110,13 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 		$__set(L, i, z);
 		lua_replace(L, i);
 	}
+#ifdef MPZ
+	if (lua_getuservalue(L, i) == LUA_TUSERDATA) {
+		/* partial ref */
+		z = *(mp$_ptr *) z;
+	}
+	lua_pop(L, 1);
+#endif
 #ifdef MPQ
 	/* sanity check to prevent fp exception */
 	luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
