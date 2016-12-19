@@ -328,12 +328,14 @@ static int z_mul_2exp(lua_State *L)
 	return 1;
 }
 
+static const char *z_div_lst[] = {
+	"cq", "fq", "tq",
+	"cr", "fr", "tr",
+	0,
+	"cqr", "fqr", "tqr",
+0};
 static int z_div_2exp(lua_State *L)
 {
-	static const char *lst[] = {
-		"cq", "fq", "tq",
-		"cr", "fr", "tr",
-	0};
 	static void (*ops[])(mpz_ptr, mpz_srcptr, mp_bitcnt_t) = {
 		mpz_cdiv_q_2exp, mpz_fdiv_q_2exp, mpz_tdiv_q_2exp,
 		mpz_cdiv_r_2exp, mpz_fdiv_r_2exp, mpz_tdiv_r_2exp,
@@ -343,7 +345,7 @@ static int z_div_2exp(lua_State *L)
 	lua_Integer b;
 
 	z__fixmeta(L);
-	mode = luaL_checkoption(L, 4, "fq", lst);
+	mode = luaL_checkoption(L, 4, "fq", z_div_lst);
 	r = _checkmpz(L, 1);
 	a = _tompz(L, 2);
 	b = luaL_checkinteger(L, 3);
@@ -355,7 +357,7 @@ static int z_div_2exp(lua_State *L)
 
 static int q_div(lua_State *L);
 
-static int z__intdiv(lua_State *L, int mode)
+static int z_idiv(lua_State *L)
 {
 	static void (*ops1[])(mpz_ptr, mpz_srcptr, mpz_srcptr) = {
 		mpz_cdiv_q, mpz_fdiv_q, mpz_tdiv_q,
@@ -364,69 +366,27 @@ static int z__intdiv(lua_State *L, int mode)
 	static void (*ops2[])(mpz_ptr, mpz_ptr, mpz_srcptr, mpz_srcptr) = {
 		mpz_cdiv_qr, mpz_fdiv_qr, mpz_tdiv_qr
 	};
+	int mode;
 	mpz_ptr q, r, a, b;
 
+	z__fixmeta(L);
 	q = _checkmpz(L, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
-	_check_divisor(L, b);
-	if (mode > 5) {
-		r = _checkmpz(L, 4);
-		(*ops2[mode-6])(q, r, a, b);
+	if ((r = luaL_testudata(L, 4, "mpz_t")) != 0) {
+		mode = luaL_checkoption(L, 5, "fqr", z_div_lst + 7);
+		(*ops2[mode])(q, r, a, b);
 		lua_rotate(L, 2, -2);
 		lua_settop(L, 2);
 		return 2;
-	} else {
-		(*ops1[mode])(q, a, b);
-		lua_settop(L, 1);
-		return 1;
 	}
+	mode = luaL_checkoption(L, 4, "fq", z_div_lst);
+	(*ops1[mode])(q, a, b);
+	lua_settop(L, 1);
+	return 1;
 }
 
-static int z_intdiv(lua_State *L)
-{
-	const char *modestr;
-	int mode;
-
-	if (!lua_isstring(L, 2)) {
-no_modestr:
-		return lua_isnone(L, 4)
-			? z__intdiv(L, 1)	/* fq */
-			: z__intdiv(L, 7);	/* fqr */
-	}
-	modestr = lua_tostring(L, 2);
-	/* try parsing modestr */
-	if (modestr[0] == 'c') {
-		mode = 0;
-	} else if (modestr[0] == 'f') {
-		mode = 1;
-	} else if (modestr[0] == 't') {
-		mode = 2;
-	} else {
-		/* not a valid modestr
-		 * maybe it is a number? */
-		goto no_modestr;
-	}
-	if (modestr[1] == 'q') {
-		if (modestr[2] == '\0') {
-			; /* ok */
-		} else if (modestr[2] == 'r' && modestr[3] == '\0') {
-			mode += 6;
-		} else {
-			goto mode_error;
-		}
-	} else if (modestr[1] == 'r' && modestr[2] == '\0') {
-		mode += 3;
-	} else {
-mode_error:
-		luaL_argerror(L, 2, "expect one of: cq cr cqr fq fr fqr tq tr tqr");
-	}
-	lua_remove(L, 2);
-	return z__intdiv(L, mode);
-}
-
-static int z_fdiv_q(lua_State *L) { z_new(L); lua_insert(L, 1); return z__intdiv(L, 1); }
-static int z_fdiv_r(lua_State *L) { z_new(L); lua_insert(L, 1); return z__intdiv(L, 4); }
+static int z_mod(lua_State *L) { lua_pushliteral(L, "fr"); return z_idiv(L); }
 
 #define PRED_DCL(op) \
 static int z_##op(lua_State *L) { lua_pushboolean(L, mpz_##op(_tompz(L, 1))); return 1; }
@@ -699,8 +659,8 @@ static const luaL_Reg $_Meta[] = {
 	METAMETHOD_ALIAS(shl, mul_2exp),
 	METAMETHOD_ALIAS(shr, div_2exp),
 	{ "__div",	q_div	},
-	METAMETHOD_ALIAS(idiv, fdiv_q),
-	METAMETHOD_ALIAS(mod, fdiv_r),
+	METAMETHOD(idiv),
+	METAMETHOD(mod),
 	METAMETHOD(pow),
 	METAMETHOD_ALIAS(band, and),
 	METAMETHOD_ALIAS(bor, ior),
@@ -731,7 +691,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(submul),
 	METHOD(mul_2exp),
 	METHOD(div_2exp),
-	METHOD_ALIAS(div, intdiv),
+	METHOD_ALIAS(div, idiv),
 	METHOD(divexact),
 	METHOD(pow),
 	METHOD(sqrt),
