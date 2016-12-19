@@ -214,11 +214,7 @@ static int $_swap(lua_State *L)
 
 static void $__fixmeta(lua_State *L)
 {
-	lua_Debug ar;
-
-	lua_getstack(L, 0, &ar);
-	lua_getinfo(L, "n", &ar);
-	if (strcmp(ar.namewhat, "metamethod") == 0) {
+	if (lua_toboolean(L, lua_upvalueindex(1))) {
 		$_new(L);
 		lua_insert(L, 1);
 	}
@@ -741,7 +737,8 @@ LUALIB_API int luaopen_mp_$(lua_State *L)
 {
 	lua_pushcfunction(L, $_call);
 	luaL_newmetatable(L, "mp$_t");
-	luaL_setfuncs(L, $_Meta, 0);
+	lua_pushboolean(L, 1);
+	luaL_setfuncs(L, $_Meta, 1);
 	luaL_newlib(L, $_Reg);
 
 	return _open_common(L);
