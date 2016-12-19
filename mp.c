@@ -47,8 +47,8 @@ static unsigned long _checkulong(lua_State *L, int i)
 
 static int _open_common(lua_State *L)
 {
-	lua_pushvalue(L, -1);
-	lua_setfield(L, -3, "__index");
+	lua_pushvalue(L, -2);
+	lua_setfield(L, -2, "__index");
 	lua_newtable(L);
 	lua_pushvalue(L, -4);
 	lua_setfield(L, -2, "__call");

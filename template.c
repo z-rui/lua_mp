@@ -726,10 +726,10 @@ static const luaL_Reg $_Reg[] =
 LUALIB_API int luaopen_mp_$(lua_State *L)
 {
 	lua_pushcfunction(L, $_call);
+	luaL_newlib(L, $_Reg);
 	luaL_newmetatable(L, "mp$_t");
 	lua_pushboolean(L, 1);
 	luaL_setfuncs(L, $_Meta, 1);
-	luaL_newlib(L, $_Reg);
 #if MPZ
 	luaL_newmetatable(L, "mpz_t*");
 	/* copy from mpz_t to mpz_t* */
