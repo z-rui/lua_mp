@@ -499,14 +499,21 @@ static int z_invert(lua_State *L)
 static int z_powm(lua_State *L)
 {
 	mpz_ptr r, a, b, c;
+	lua_Integer val;
+	int isnum;
 
 	r = _checkmpz(L, 1, 1);
 	a = _tompz(L, 2);
-	b = _tompz(L, 3);
+	val = lua_tonumberx(L, 3, &isnum);
 	c = _tompz(L, 4);
-	luaL_argcheck(L, mpz_sgn(b) >= 0, 3, "expect non-negative");
+	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
+		mpz_powm_ui(r, a, val, c);
+	} else {
+		b = _tompz(L, 3);
+		luaL_argcheck(L, mpz_sgn(b) >= 0, 3, "expect non-negative");
+		mpz_powm(r, a, b, c);
+	}
 
-	mpz_powm(r, a, b, c);
 	lua_settop(L, 1);
 	return 1;
 }
@@ -610,18 +617,12 @@ static int q_canonicalize(lua_State *L)
 
 static int q_numref(lua_State *L)
 {
-	mpq_ptr q;
-
-	q = _checkmpq(L, 1, 1);
-	return z__partial_ref(L, 1, mpq_numref(q));
+	return z__partial_ref(L, 1, mpq_numref(_checkmpq(L, 1, 1)));
 }
 
 static int q_denref(lua_State *L)
 {
-	mpq_ptr q;
-
-	q = _checkmpq(L, 1, 1);
-	return z__partial_ref(L, 1, mpq_denref(q));
+	return z__partial_ref(L, 1, mpq_denref(_checkmpq(L, 1, 1)));
 }
 #endif
 
