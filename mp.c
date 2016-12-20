@@ -60,8 +60,9 @@ static int _open_common(lua_State *L)
 {
 	lua_pushvalue(L, -2);
 	lua_setfield(L, -2, "__index");
+	lua_pop(L, 1); /* pop metatable */
 	lua_newtable(L);
-	lua_pushvalue(L, -4);
+	lua_pushvalue(L, -3);
 	lua_setfield(L, -2, "__call");
 	lua_setmetatable(L, -2);
 
