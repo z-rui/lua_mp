@@ -23,15 +23,16 @@ static mp$_ptr _checkmp$(lua_State *L, int i, int raise)
 {
 	void *z;
 
-#ifdef MPZ
-	z = luaL_testudata(L, i, "mpz_t*");
-	if (z) {
-		/* partial ref */
-		return *(mp$_ptr *) z;
-	}
-#endif
 	z = (raise) ? luaL_checkudata(L, i, "mp$_t")
 		    : luaL_testudata(L, i, "mp$_t");
+#ifdef MPZ
+	if (lua_getuservalue(L, i) == LUA_TUSERDATA
+		&& luaL_testudata(L, -1, "mpq_t")) {
+		/* partial ref */
+		z = *(mp$_ptr *) z;
+	}
+	lua_pop(L, 1); /* remove uservalue */
+#endif
 	return (mp$_ptr) z;
 }
 
@@ -301,12 +302,23 @@ OP_BIN_UI(lcm)
 static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
 {
 	mpz_ptr *p = lua_newuserdata(L, sizeof (mpz_ptr));
-	if (luaL_getmetatable(L, "mp$_t*") == LUA_TNIL)
-		luaL_error(L, "mp$_t* not registered");
+	if (luaL_getmetatable(L, "mp$_t") == LUA_TNIL)
+		luaL_error(L, "mp$_t not registered");
 	*p = z;
-	lua_setmetatable(L, -2);
+	/* temporarily remove the __gc method from metatable */
+	lua_pushnil(L);
+	lua_setfield(L, -2, "__gc");
+	/* set metatable (without __gc method) */
+	lua_pushvalue(L, -1);
+	lua_setmetatable(L, -3);
+	/* restore __gc method */
+	lua_pushcfunction(L, z_gc);
+	lua_setfield(L, -2, "__gc");
+	/* pop metatable */
+	lua_pop(L, 1);
+
 	lua_pushvalue(L, i);
-	lua_setuservalue(L, -2);
+	lua_setuservalue(L, -2); /* reference the object */
 	return 1;
 }
 
@@ -782,13 +794,6 @@ LUALIB_API int luaopen_mp_$(lua_State *L)
 	luaL_newlib(L, $_Reg);
 	luaL_newmetatable(L, "mp$_t");
 	luaL_setfuncs(L, $_Meta, 0);
-#if MPZ
-	luaL_newmetatable(L, "mpz_t*");
-	luaL_setfuncs(L, $_Meta + 1, 0); /* skip __gc */
-	lua_pushvalue(L, -3);
-	lua_setfield(L, -2, "__index");
-	lua_pop(L, 1);
-#endif
 
 	return _open_common(L);
 }
