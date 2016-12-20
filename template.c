@@ -744,12 +744,12 @@ LUALIB_API int luaopen_mp_$(lua_State *L)
 	{
 		const luaL_Reg *r = &z_Meta[1]; /* skip __gc */
 		while (r->name) {
-			lua_getfield(L, -3, r->name);
+			lua_getfield(L, -2, r->name);
 			lua_setfield(L, -2, r->name);
 			r++;
 		}
 	}
-	lua_pushvalue(L, -2);
+	lua_pushvalue(L, -3);
 	lua_setfield(L, -2, "__index");
 	lua_pop(L, 1);
 #endif
