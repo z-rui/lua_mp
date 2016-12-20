@@ -755,6 +755,7 @@ static const luaL_Reg $_Reg[] =
 
 	METHOD(sizeinbase),
 #elif defined(MPQ)
+	METHOD(div),
 	METHOD(inv),
 	METHOD(canonicalize),
 	METHOD(numref),
