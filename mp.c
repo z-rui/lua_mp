@@ -87,82 +87,8 @@ static int _check_inbase(lua_State *L, int i)
 	return (int) base;
 }
 
-static mpz_ptr _tompz(lua_State *, int);
-static mpq_ptr _tompq(lua_State *, int);
-static mpz_ptr _checkmpz(lua_State *, int, int);
-static mpq_ptr _checkmpq(lua_State *, int, int);
-
-static int mp__cmp(lua_State *L)
-{
-	void *a, *b;
-	int ta, tb, ret, isint, issi = 0;
-	long si;
-
-	ta = lua_type(L, 1);
-	tb = lua_type(L, 2);
-	if (tb == LUA_TNUMBER) {
-		lua_Integer val;
-		si = val = lua_tointegerx(L, 2, &isint);
-		issi = isint && CAN_HOLD(long, val);
-	}
-	if ((a = _checkmpq(L, 1, 0))) {
-		if (issi) {
-			ret = mpq_cmp_si((mpq_ptr) a, si, 1);
-		} else if ((b = _checkmpz(L, 2, 0))) {
-			ret = mpq_cmp_z(a, b);
-		} else {
-			b = _tompq(L, 2);
-			ret = mpq_cmp(a, b);
-		}
-	} else if ((a = _checkmpz(L, 1, 0)) != 0) {
-		switch (tb) {
-			case LUA_TNUMBER:
-				if (issi) {
-					ret = mpz_cmp_si((mpz_ptr) a, si);
-				} else if (!isint) {
-					ret = mpz_cmp_d(a, lua_tonumber(L, 2));
-				} else {
-					goto z_general_case;
-				}
-				break;
-			case LUA_TUSERDATA:
-				if ((b = _checkmpq(L, 2, 0))) {
-					ret = -mpq_cmp_z(b, a);
-					break;
-				}
-				/* fallthrough */
-			default:
-z_general_case:
-				b = _tompz(L, 2);
-				ret = mpz_cmp(a, b);
-		}
-	} else if (ta == LUA_TUSERDATA || tb != LUA_TUSERDATA) {
-		return luaL_error(L, "unsupported comparison");
-	} else {
-		lua_insert(L, -2); /* swap the two on top */
-		return -mp__cmp(L);
-	}
-	return ret;
-}
-
-static int mp_cmp(lua_State *L)
-{
-	lua_pushinteger(L, mp__cmp(L));
-	return 1;
-}
-
-static int mp_eq(lua_State *L)
-{
-	mpq_ptr a, b;
-	a = _checkmpq(L, 1, 0);
-	if (a && (b = _checkmpq(L, 2, 0))) {
-		lua_pushboolean(L, mpq_equal(a, b));
-	} else {
-		lua_pushboolean(L, mp__cmp(L) == 0);
-	}
-	return 1;
-}
-
+static mpz_ptr _checkmpz(lua_State *L, int, int);
+static mpq_ptr _checkmpq(lua_State *L, int, int);
 
 #include "mpz.c"
 #include "mpq.c"

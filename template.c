@@ -203,6 +203,59 @@ static int $_tonumber(lua_State *L)
 	return 1;
 }
 
+static int $__cmp(lua_State *L)
+{
+	mp$_ptr a;
+	void *b;
+	int ret, isint;
+	lua_Integer si;
+
+	a = _checkmp$(L, 1, 1);
+	si = lua_tointegerx(L, 2, &isint);
+	if (isint && CAN_HOLD(long, si)) {
+#if defined(MPQ)
+		lua_Integer si2;
+
+		si2 = luaL_optinteger(L, 3, 1);
+		luaL_argcheck(L, CAN_HOLD(long, si2), 3, "integer overflow");
+		ret = mpq_cmp_si(a, si, si2);
+	} else if ((b = _checkmpz(L, 2, 0))) {
+		ret = mpq_cmp_z(a, b);
+#elif defined(MPZ)
+		ret = mpz_cmp_si(a, si);
+	} else if (!isint && lua_isnumber(L, 2)) {
+		ret = mpz_cmp_d(a, lua_tonumber(L, 2));
+#endif
+	} else { /* general case */
+		b = _tomp$(L, 2);
+		ret = mp$_cmp(a, b);
+	}
+	return ret;
+}
+
+static int $_cmp(lua_State *L)
+{
+	lua_pushinteger(L, $__cmp(L));
+	return 1;
+}
+
+static int $_eq(lua_State *L)
+{
+#ifdef MPQ
+	mp$_ptr a, b;
+#endif
+	int ret;
+
+#ifdef MPQ
+	if ((a = _checkmpq(L, 1, 0)) && (b = _checkmpq(L, 2, 0)))
+		ret = mpq_equal(a, b);
+	else
+#endif
+		ret = ($__cmp(L) == 0);
+	lua_pushboolean(L, ret);
+	return 1;
+}
+
 static int $_swap(lua_State *L)
 {
 	mp$_ptr a, b;
@@ -683,8 +736,9 @@ static const luaL_Reg $_Reg[] =
 	METHOD(add),
 	METHOD(sub),
 	METHOD(mul),
-	{ "cmp",	mp_cmp	},
-	{ "eq",		mp_eq	},
+
+	METHOD(cmp),
+	METHOD(eq),
 #if defined(MPZ)
 	METHOD(addmul),
 	METHOD(submul),
