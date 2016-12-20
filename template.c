@@ -203,7 +203,7 @@ static int $_tonumber(lua_State *L)
 	return 1;
 }
 
-static int $__cmp(lua_State *L)
+static int $_cmp(lua_State *L)
 {
 	mp$_ptr a;
 	void *b;
@@ -230,29 +230,7 @@ static int $__cmp(lua_State *L)
 		b = _tomp$(L, 2);
 		ret = mp$_cmp(a, b);
 	}
-	return ret;
-}
-
-static int $_cmp(lua_State *L)
-{
-	lua_pushinteger(L, $__cmp(L));
-	return 1;
-}
-
-static int $_eq(lua_State *L)
-{
-#ifdef MPQ
-	mp$_ptr a, b;
-#endif
-	int ret;
-
-#ifdef MPQ
-	if ((a = _checkmpq(L, 1, 0)) && (b = _checkmpq(L, 2, 0)))
-		ret = mpq_equal(a, b);
-	else
-#endif
-		ret = ($__cmp(L) == 0);
-	lua_pushboolean(L, ret);
+	lua_pushinteger(L, ret);
 	return 1;
 }
 
@@ -675,6 +653,19 @@ static int q_denref(lua_State *L)
 {
 	return z__partial_ref(L, 1, mpq_denref(_checkmpq(L, 1, 1)));
 }
+
+static int $_equal(lua_State *L)
+{
+	mpq_ptr a, b;
+	int ret;
+
+	a = _checkmpq(L, 1, 1);
+	b = _tompq(L, 2);
+	ret = mpq_equal(a, b);
+	lua_pushboolean(L, ret);
+	return 1;
+}
+
 #endif
 
 static int $_inp_str(lua_State *L)
@@ -738,7 +729,6 @@ static const luaL_Reg $_Reg[] =
 	METHOD(mul),
 
 	METHOD(cmp),
-	METHOD(eq),
 #if defined(MPZ)
 	METHOD(addmul),
 	METHOD(submul),
@@ -779,6 +769,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(canonicalize),
 	METHOD(numref),
 	METHOD(denref),
+	METHOD(equal),
 #endif
 	METHOD(inp_str),
 	METHOD(out_str),
