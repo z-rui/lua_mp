@@ -736,19 +736,10 @@ LUALIB_API int luaopen_mp_$(lua_State *L)
 	lua_pushcfunction(L, $_call);
 	luaL_newlib(L, $_Reg);
 	luaL_newmetatable(L, "mp$_t");
-	lua_pushboolean(L, 1);
-	luaL_setfuncs(L, $_Meta, 1);
+	luaL_setfuncs(L, $_Meta, 0);
 #if MPZ
 	luaL_newmetatable(L, "mpz_t*");
-	/* copy from mpz_t to mpz_t* */
-	{
-		const luaL_Reg *r = &z_Meta[1]; /* skip __gc */
-		while (r->name) {
-			lua_getfield(L, -2, r->name);
-			lua_setfield(L, -2, r->name);
-			r++;
-		}
-	}
+	luaL_setfuncs(L, $_Meta + 1, 0); /* skip __gc */
 	lua_pushvalue(L, -3);
 	lua_setfield(L, -2, "__index");
 	lua_pop(L, 1);
