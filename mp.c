@@ -151,12 +151,6 @@ static int mp_cmp(lua_State *L)
 	return 1;
 }
 
-static int mp_lt(lua_State *L)
-{
-	lua_pushboolean(L, mp__cmp(L) < 0);
-	return 1;
-}
-
 static int mp_eq(lua_State *L)
 {
 	mpq_ptr a, b;

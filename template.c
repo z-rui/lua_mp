@@ -213,17 +213,8 @@ static int $_swap(lua_State *L)
 	return 0;
 }
 
-static void $__fixmeta(lua_State *L)
-{
-	if (lua_toboolean(L, lua_upvalueindex(1))) {
-		$_new(L);
-		lua_insert(L, 1);
-	}
-}
-
 static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 {
-	$__fixmeta(L);
 	(*op)(_checkmp$(L, 1, 1), _tomp$(L, 2));
 	lua_settop(L, 1);
 	return 1;
@@ -231,7 +222,6 @@ static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 
 static int $_binop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 {
-	$__fixmeta(L);
 	(*op)(_checkmp$(L, 1, 1), _tomp$(L, 2), _tomp$(L, 3));
 	lua_settop(L, 1);
 	return 1;
@@ -269,7 +259,7 @@ static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), vo
 }
 
 #define OP_BIN_UI(fun) \
-static int $_##fun(lua_State *L) { $__fixmeta(L); return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
+static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
 
 OP_BIN_UI(add)
 OP_BIN_UI(sub)
@@ -312,7 +302,6 @@ static int z_mul_2exp(lua_State *L)
 	mpz_ptr a, b;
 	lua_Integer n;
 
-	z__fixmeta(L);
 	a = _checkmpz(L, 1, 1);
 	b = _tompz(L, 2);
 	n = luaL_checkinteger(L, 3);
@@ -338,7 +327,6 @@ static int z_div_2exp(lua_State *L)
 	mpz_ptr r, a;
 	lua_Integer b;
 
-	z__fixmeta(L);
 	mode = luaL_checkoption(L, 4, "fq", z_div_lst);
 	r = _checkmpz(L, 1, 1);
 	a = _tompz(L, 2);
@@ -363,7 +351,6 @@ static int z_idiv(lua_State *L)
 	int mode;
 	mpz_ptr q, r, a, b;
 
-	z__fixmeta(L);
 	q = _checkmpz(L, 1, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
@@ -536,7 +523,6 @@ static int z_pow(lua_State *L)
 	mpz_ptr z, base;
 	unsigned long exp;
 
-	z__fixmeta(L);
 	z = _checkmpz(L, 1, 1);
 	base = _tompz(L, 2);
 	exp = _checkulong(L, 3);
@@ -607,7 +593,6 @@ static int q_div(lua_State *L)
 {
 	mpq_ptr a, b, c;
 
-	q__fixmeta(L);
 	a = _checkmpq(L, 1, 1);
 	b = _tompq(L, 2);
 	c = _tompq(L, 3);
@@ -682,26 +667,6 @@ static const luaL_Reg $_Meta[] = {
 	/* Note: keep __gc the first */
 	METAMETHOD(gc),
 	METAMETHOD(tostring),
-	METAMETHOD_ALIAS(unm, neg),
-	METAMETHOD(add),
-	METAMETHOD(sub),
-	METAMETHOD(mul),
-	{ "__eq",	mp_eq	},
-	{ "__lt",	mp_lt	},
-#if defined(MPZ)
-	METAMETHOD_ALIAS(shl, mul_2exp),
-	METAMETHOD_ALIAS(shr, div_2exp),
-	{ "__div",	q_div	},
-	METAMETHOD(idiv),
-	METAMETHOD(mod),
-	METAMETHOD(pow),
-	METAMETHOD_ALIAS(band, and),
-	METAMETHOD_ALIAS(bor, ior),
-	METAMETHOD_ALIAS(bxor, xor),
-	METAMETHOD_ALIAS(bnot, com),
-#elif defined(MPQ)
-	METAMETHOD(div),
-#endif
 	{ NULL,		NULL	}
 };
 
