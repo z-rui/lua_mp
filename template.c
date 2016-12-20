@@ -719,6 +719,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(sub),
 	METHOD(mul),
 	{ "cmp",	mp_cmp	},
+	{ "eq",		mp_eq	},
 #if defined(MPZ)
 	METHOD(addmul),
 	METHOD(submul),
@@ -726,6 +727,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(div_2exp),
 	METHOD_ALIAS(div, idiv),
 	METHOD(divexact),
+	METHOD(mod),
 	METHOD(pow),
 	METHOD(sqrt),
 	METHOD(root),
