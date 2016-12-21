@@ -692,12 +692,21 @@ static int q_div(lua_State *L)
 	mpz_ptr zb, zc;
 
 	a = _checkmpq(L, 1, 1);
-	if (lua_isinteger(L, 2) && lua_isinteger(L, 3)) {
-		z__set_int(L, mpq_numref(a), 2);
-		z__set_int(L, mpq_denref(a), 3);
-	} else if ((zb = _checkmpz(L, 2, 0)) && (zc = _checkmpz(L, 3, 0))) {
-		mpz_set(mpq_numref(a), zb);
-		mpz_set(mpq_denref(a), zc);
+	zb = zc = 0;
+	if (	(lua_isinteger(L, 2) || (zb = _checkmpz(L, 2, 0))) &&
+		(lua_isinteger(L, 3) || (zc = _checkmpz(L, 3, 0)))) {
+		/* b and c are integers, just set {num,den} */
+		if (zb)
+			mpz_set(mpq_numref(a), zb);
+		else
+			z__set_int(L, mpq_numref(a), 2);
+		if (zc)
+			mpz_set(mpq_denref(a), zc);
+		else
+			z__set_int(L, mpq_denref(a), 3);
+		/* canonicalize the result */
+		_check_divisor(L, mpq_denref(a));
+		mpq_canonicalize(a);
 	} else {
 		b = _tompq(L, 2);
 		c = _tompq(L, 3);
