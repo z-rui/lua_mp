@@ -140,34 +140,29 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 	return z;
 }
 
-static int $_call(lua_State *L)
-{
-	mp$_ptr z;
-
-	z = $_new(L);
-	/* keep in mind that there is a
-	 * 'self' argument at index 1;
-	 * the stack now looks like:
-	 * self | args... | z */
-	switch (lua_gettop(L) - 2) {
-	case 1:
-		$__set(L, 2, z);
-	case 0:
-		break;
-	default:
-		$__set_str(L, z, luaL_checkstring(L, 2), _check_inbase(L, 3));
-		break;
-	}
-	return 1;
-}
-
 static int $_set(lua_State *L)
 {
 	mp$_ptr z;
 
 	z = _checkmp$(L, 1, 1);
-	$__set(L, 2, z);
+	if (lua_type(L, 2) == LUA_TSTRING && lua_isinteger(L, 3)) {
+		int base;
+		/* set(str, base) */
+		base = _check_inbase(L, 3);
+		$__set_str(L, z, lua_tostring(L, 2), base);
+	} else {
+		$__set(L, 2, z);
+	}
 	lua_settop(L, 1);
+	return 1;
+}
+
+static int $_call(lua_State *L)
+{
+	$_new(L);
+	lua_replace(L, 1); /* replace the 'self' argument (the table) */
+	if (lua_gettop(L) > 1)
+		return $_set(L);
 	return 1;
 }
 
