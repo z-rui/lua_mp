@@ -254,7 +254,7 @@ overflow_long:
 			num = mpq_numref((mpq_ptr) b);
 			den = mpq_denref((mpq_ptr) b);
 			z__set_str(L, num, lua_tostring(L, 2), 0);
-			z__set_str(L, den, lua_tostring(L, 3), 0);
+			z__set_int(L, den, 3);
 			q_checksanity(L, 3, b);
 			goto q_cmp_q;
 		}
