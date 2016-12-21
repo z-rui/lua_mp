@@ -686,12 +686,21 @@ static int q_inv(lua_State *L)
 static int q_div(lua_State *L)
 {
 	mpq_ptr a, b, c;
+	mpz_ptr zb, zc;
 
 	a = _checkmpq(L, 1, 1);
-	b = _tompq(L, 2);
-	c = _tompq(L, 3);
-	_check_divisor(L, mpq_numref(c));
-	mpq_div(a, b, c);
+	if (lua_isinteger(L, 2) && lua_isinteger(L, 3)) {
+		z__set_int(L, mpq_numref(a), 2);
+		z__set_int(L, mpq_denref(a), 3);
+	} else if ((zb = _checkmpz(L, 2, 0)) && (zc = _checkmpz(L, 3, 0))) {
+		mpz_set(mpq_numref(a), zb);
+		mpz_set(mpq_denref(a), zc);
+	} else {
+		b = _tompq(L, 2);
+		c = _tompq(L, 3);
+		_check_divisor(L, mpq_numref(c));
+		mpq_div(a, b, c);
+	}
 	lua_settop(L, 1);
 	return 1;
 }
