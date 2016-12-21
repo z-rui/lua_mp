@@ -23,12 +23,14 @@
 
 #define CAN_HOLD(type, val) ((type) (val) == (val))
 
-static void _conversion_error(lua_State *L, const char *srctyp, const char *typ, int base)
+static void _conversion_error(lua_State *L, int i, const char *typ, int base)
 {
-	if (base)
-		luaL_error(L, "cannot convert %s to %s in base %d", srctyp, typ, base);
-	else
-		luaL_error(L, "cannot convert %s to %s", srctyp, typ);
+	lua_pushfstring(L, "cannot convert to %s", typ);
+	if (base) {
+		lua_pushfstring(L, " in base %d", base);
+		lua_concat(L, 2);
+	}
+	luaL_argerror(L, i, lua_tostring(L, -1));
 }
 
 static void _check_divisor(lua_State *L, mpz_ptr divisor)

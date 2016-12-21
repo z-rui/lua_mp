@@ -8,14 +8,19 @@ static mp$_ptr $_new(lua_State *L)
 	return z;
 }
 
-static void $__set_str(lua_State *L, mp$_ptr z, const char *s, int base)
-{
-	if (mp$_set_str(z, s, base) != 0) {
 #if defined(MPZ)
-		_conversion_error(L, "string", "integer", base);
+# define MPNAME "integer"
 #elif defined(MPQ)
-		_conversion_error(L, "string", "rational", base);
+# define MPNAME "rational"
 #endif
+
+static void $__set_str(lua_State *L, mp$_ptr z, int i, int base)
+{
+	const char *s;
+
+	s = lua_tostring(L, i);
+	if (mp$_set_str(z, s, base) != 0) {
+		_conversion_error(L, i, MPNAME, base);
 	}
 }
 
@@ -28,7 +33,7 @@ static void z__set_int(lua_State *L, mpz_ptr z, int i)
 	if (CAN_HOLD(long, val)) {
 		mpz_set_si(z, (long) val);
 	} else {
-		z__set_str(L, z, lua_tostring(L, i), 0);
+		z__set_str(L, z, i, 0);
 	}
 }
 #endif
@@ -74,7 +79,7 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 #endif
 			break;
 		case LUA_TSTRING:
-			$__set_str(L, z, lua_tostring(L, i), 0);
+			$__set_str(L, z, i, 0);
 			break;
 		case LUA_TUSERDATA: {
 			void *p;
@@ -106,13 +111,7 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 		}
 		default:
 error:
-			_conversion_error(L, luaL_typename(L, i),
-#if defined(MPZ)
-				"integer"
-#elif defined(MPQ)
-				"rational"
-#endif
-			, 0);
+			_conversion_error(L, i, MPNAME, 0);
 	}
 }
 
@@ -149,7 +148,7 @@ static int $_set(lua_State *L)
 		int base;
 		/* set(str, base) */
 		base = _check_inbase(L, 3);
-		$__set_str(L, z, lua_tostring(L, 2), base);
+		$__set_str(L, z, 2, base);
 	} else {
 		$__set(L, 2, z);
 	}
@@ -253,13 +252,13 @@ overflow_long:
 			b = q_new(L);
 			num = mpq_numref((mpq_ptr) b);
 			den = mpq_denref((mpq_ptr) b);
-			z__set_str(L, num, lua_tostring(L, 2), 0);
+			z__set_str(L, num, 2, 0);
 			z__set_int(L, den, 3);
 			q_checksanity(L, 3, b);
 			goto q_cmp_q;
 		}
 		b = z_new(L);
-		z__set_str(L, b, lua_tostring(L, 2), 0);
+		z__set_str(L, b, 2, 0);
 		goto q_cmp_z;
 	} else if ((b = _checkmpz(L, 2, 0))) {
 q_cmp_z:
