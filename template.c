@@ -328,14 +328,17 @@ static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), vo
 	return 1;
 }
 
-#define OP_BIN_UI(fun) \
+#define OP_UI(fun) \
 static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
 
-OP_BIN_UI(add)
-OP_BIN_UI(sub)
-OP_BIN_UI(mul)
-OP_BIN_UI(divexact)
-OP_BIN_UI(lcm)
+OP_UI(add)
+OP_UI(sub)
+OP_UI(mul)
+OP_UI(divexact)
+OP_UI(lcm)
+
+OP_UI(addmul)
+OP_UI(submul)
 
 static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
 {
@@ -371,12 +374,6 @@ static int z_sizeinbase(lua_State *L)
 	lua_pushinteger(L, mpz_sizeinbase(z, base));
 	return 1;
 }
-
-#define OP_TERN_UI(fun) \
-static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
-
-OP_TERN_UI(addmul)
-OP_TERN_UI(submul)
 
 static int z_mul_2exp(lua_State *L)
 {
