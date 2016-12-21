@@ -434,30 +434,34 @@ static int z_sizeinbase(lua_State *L)
 
 static int z_idiv(lua_State *L)
 {
-	static void (*ops1[])(mpz_ptr, mpz_srcptr, mpz_srcptr) = {
-		mpz_cdiv_q, mpz_fdiv_q, mpz_tdiv_q,
-		mpz_cdiv_r, mpz_fdiv_r, mpz_tdiv_r,
-	};
-	static void (*ops2[])(mpz_ptr, mpz_ptr, mpz_srcptr, mpz_srcptr) = {
-		mpz_cdiv_qr, mpz_fdiv_qr, mpz_tdiv_qr
-	};
 	int mode;
 	mpz_ptr q, r, a, b;
 
 	q = _checkmpz(L, 1, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
+	_check_divisor(L, b);
 	if ((r = _checkmpz(L, 4, 0)) != 0) {
+		/* return both quotient and remainder */
+		static void (*ops[])(mpz_ptr, mpz_ptr, mpz_srcptr, mpz_srcptr) = {
+			mpz_cdiv_qr, mpz_fdiv_qr, mpz_tdiv_qr
+		};
 		mode = luaL_checkoption(L, 5, "fqr", z_div_lst + 7);
-		(*ops2[mode])(q, r, a, b);
+		(*ops[mode])(q, r, a, b);
 		lua_rotate(L, 2, -2);
 		lua_settop(L, 2);
 		return 2;
+	} else {
+		/* return either quotient or remainder */
+		static void (*ops[])(mpz_ptr, mpz_srcptr, mpz_srcptr) = {
+			mpz_cdiv_q, mpz_fdiv_q, mpz_tdiv_q,
+			mpz_cdiv_r, mpz_fdiv_r, mpz_tdiv_r,
+		};
+		mode = luaL_checkoption(L, 4, "fq", z_div_lst);
+		(*ops[mode])(q, a, b);
+		lua_settop(L, 1);
+		return 1;
 	}
-	mode = luaL_checkoption(L, 4, "fq", z_div_lst);
-	(*ops1[mode])(q, a, b);
-	lua_settop(L, 1);
-	return 1;
 }
 
 static int z_mod(lua_State *L) { lua_pushliteral(L, "fr"); return z_idiv(L); }
