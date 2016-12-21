@@ -31,6 +31,7 @@ Z.__div = mp_op(q, q.div)
 local z_ops = {
   __unm  = z.neg,
   __idiv = z.div,
+  __mod  = z.mod,
   __pow  = z.pow,
   __band = z.band,
   __bor  = z.bor,
