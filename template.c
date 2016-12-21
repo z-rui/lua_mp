@@ -283,6 +283,57 @@ static int $_swap(lua_State *L)
 	return 0;
 }
 
+static int $_mul_2exp(lua_State *L)
+{
+	mp$_ptr a, b;
+	lua_Integer n;
+
+	a = _checkmp$(L, 1, 1);
+	b = _tomp$(L, 2);
+	n = luaL_checkinteger(L, 3);
+	luaL_argcheck(L, n >= 0, 3, "expect non-negative");
+	mp$_mul_2exp(a, b, n);
+	lua_settop(L, 1);
+	return 1;
+}
+
+#ifdef MPZ
+static const char *z_div_lst[] = {
+	"cq", "fq", "tq",
+	"cr", "fr", "tr",
+	0,
+	"cqr", "fqr", "tqr",
+0};
+#endif
+
+static int $_div_2exp(lua_State *L)
+{
+#ifdef MPZ
+	static void (*ops[])(mpz_ptr, mpz_srcptr, mp_bitcnt_t) = {
+		mpz_cdiv_q_2exp, mpz_fdiv_q_2exp, mpz_tdiv_q_2exp,
+		mpz_cdiv_r_2exp, mpz_fdiv_r_2exp, mpz_tdiv_r_2exp,
+	};
+	int mode;
+#endif
+	mp$_ptr r, a;
+	lua_Integer b;
+
+#ifdef MPZ
+	mode = luaL_checkoption(L, 4, "fq", z_div_lst);
+#endif
+	r = _checkmp$(L, 1, 1);
+	a = _tomp$(L, 2);
+	b = luaL_checkinteger(L, 3);
+	luaL_argcheck(L, b >= 0, 3, "expect non-negative");
+#ifdef MPZ
+	(*ops[mode])(r, a, b);
+#else
+	mp$_div_2exp(r, a, b);
+#endif
+	lua_settop(L, 1);
+	return 1;
+}
+
 static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 {
 	(*op)(_checkmp$(L, 1, 1), _tomp$(L, 2));
@@ -374,48 +425,6 @@ static int z_sizeinbase(lua_State *L)
 	lua_pushinteger(L, mpz_sizeinbase(z, base));
 	return 1;
 }
-
-static int z_mul_2exp(lua_State *L)
-{
-	mpz_ptr a, b;
-	lua_Integer n;
-
-	a = _checkmpz(L, 1, 1);
-	b = _tompz(L, 2);
-	n = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, n >= 0, 3, "expect non-negative");
-	mpz_mul_2exp(a, b, n);
-	lua_settop(L, 1);
-	return 1;
-}
-
-static const char *z_div_lst[] = {
-	"cq", "fq", "tq",
-	"cr", "fr", "tr",
-	0,
-	"cqr", "fqr", "tqr",
-0};
-static int z_div_2exp(lua_State *L)
-{
-	static void (*ops[])(mpz_ptr, mpz_srcptr, mp_bitcnt_t) = {
-		mpz_cdiv_q_2exp, mpz_fdiv_q_2exp, mpz_tdiv_q_2exp,
-		mpz_cdiv_r_2exp, mpz_fdiv_r_2exp, mpz_tdiv_r_2exp,
-	};
-	int mode;
-	mpz_ptr r, a;
-	lua_Integer b;
-
-	mode = luaL_checkoption(L, 4, "fq", z_div_lst);
-	r = _checkmpz(L, 1, 1);
-	a = _tompz(L, 2);
-	b = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, b >= 0, 3, "expect non-negative");
-	(*ops[mode])(r, a, b);
-	lua_settop(L, 1);
-	return 1;
-}
-
-static int q_div(lua_State *L);
 
 static int z_idiv(lua_State *L)
 {
@@ -774,13 +783,13 @@ static const luaL_Reg $_Reg[] =
 	METHOD(add),
 	METHOD(sub),
 	METHOD(mul),
+	METHOD(mul_2exp),
+	METHOD(div_2exp),
 
 	METHOD(cmp),
 #if defined(MPZ)
 	METHOD(addmul),
 	METHOD(submul),
-	METHOD(mul_2exp),
-	METHOD(div_2exp),
 	METHOD_ALIAS(div, idiv),
 	METHOD(divexact),
 	METHOD(mod),
