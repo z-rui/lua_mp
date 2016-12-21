@@ -104,6 +104,14 @@ error:
 	}
 }
 
+#ifdef MPQ
+static void q_checksanity(lua_State *L, int i, mpq_ptr z)
+{
+	/* sanity check to prevent fp exception */
+	luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
+}
+#endif
+
 static mp$_ptr _tomp$(lua_State *L, int i)
 {
 	mp$_ptr z;
@@ -115,8 +123,7 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 		lua_replace(L, i);
 	}
 #ifdef MPQ
-	/* sanity check to prevent fp exception */
-	luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
+	q_checksanity(L, i, z);
 #endif
 	return z;
 }
@@ -214,15 +221,41 @@ static int $_cmp(lua_State *L)
 	lua_Integer si;
 
 	a = _checkmp$(L, 1, 1);
+#ifdef MPQ
+	q_checksanity(L, 1, a);
+#endif
 	si = lua_tointegerx(L, 2, &isint);
 	if (isint && CAN_HOLD(long, si)) {
 #if defined(MPQ)
 		lua_Integer si2;
 
-		si2 = luaL_optinteger(L, 3, 1);
-		luaL_argcheck(L, CAN_HOLD(long, si2), 3, "integer overflow");
+		if (lua_isnone(L, 3)) {
+			si2 = 1;
+		} else {
+			si2 = luaL_checkinteger(L, 3);
+			if (!CAN_HOLD(long, si2))
+				goto overflow_long;
+		}
 		ret = mpq_cmp_si(a, si, si2);
+	} else if (isint) { /* integer, but overflows long */
+		/* this can only happen when lua_Integer is longer
+		 * than long */
+		if (!lua_isnone(L, 3) && luaL_checkinteger(L, 3)) {
+			mpz_ptr num, den;
+overflow_long:
+			b = q_new(L);
+			num = mpq_numref((mpq_ptr) b);
+			den = mpq_denref((mpq_ptr) b);
+			z__set_str(L, num, lua_tostring(L, 2), 0);
+			z__set_str(L, den, lua_tostring(L, 3), 0);
+			q_checksanity(L, 3, b);
+			goto q_cmp_q;
+		}
+		b = z_new(L);
+		z__set_str(L, b, lua_tostring(L, 2), 0);
+		goto q_cmp_z;
 	} else if ((b = _checkmpz(L, 2, 0))) {
+q_cmp_z:
 		ret = mpq_cmp_z(a, b);
 #elif defined(MPZ)
 		ret = mpz_cmp_si(a, si);
@@ -231,6 +264,9 @@ static int $_cmp(lua_State *L)
 #endif
 	} else { /* general case */
 		b = _tomp$(L, 2);
+#ifdef MPQ
+q_cmp_q:
+#endif
 		ret = mp$_cmp(a, b);
 	}
 	lua_pushinteger(L, ret);
