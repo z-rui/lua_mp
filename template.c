@@ -19,6 +19,20 @@ static void $__set_str(lua_State *L, mp$_ptr z, const char *s, int base)
 	}
 }
 
+#ifdef MPZ
+static void z__set_int(lua_State *L, mpz_ptr z, int i)
+{
+	lua_Integer val;
+
+	val = lua_tonumber(L, i);
+	if (CAN_HOLD(long, val)) {
+		mpz_set_si(z, (long) val);
+	} else {
+		z__set_str(L, z, lua_tostring(L, i), 0);
+	}
+}
+#endif
+
 static mp$_ptr _checkmp$(lua_State *L, int i, int raise)
 {
 	void *z;
@@ -41,26 +55,24 @@ static mp$_ptr _checkmp$(lua_State *L, int i, int raise)
 static void $__set(lua_State *L, int i, mp$_ptr z)
 {
 	switch (lua_type(L, i)) {
-		case LUA_TNUMBER: {
+		case LUA_TNUMBER:
 #if defined(MPZ)
-			lua_Integer val;
-
-			val = luaL_checkinteger(L, i);
-			if (CAN_HOLD(long, val)) {
-				mp$_set_si(z, (long int) val);
-				break;
-			}
-			/* otherwise fall through */
+			luaL_checkinteger(L, i);
+			z__set_int(L, z, i);
 #elif defined(MPQ)
-			lua_Number val;
+			if (lua_isinteger(L, i)) {
+				z__set_int(L, mpq_numref(z), i);
+				mpz_set_si(mpq_denref(z), 1);
+			} else {
+				lua_Number val;
 
-			val = lua_tonumber(L, i);
-			luaL_argcheck(L, val == val && val * 0.0 == 0.0, i,
-					"infinity or NaN");
-			mp$_set_d(z, val);
-			break;
+				val = lua_tonumber(L, i);
+				luaL_argcheck(L, val == val && val * 0.0 == 0.0, i,
+						"infinity or NaN");
+				mp$_set_d(z, val);
+			}
 #endif
-		}
+			break;
 		case LUA_TSTRING:
 			$__set_str(L, z, lua_tostring(L, i), 0);
 			break;
