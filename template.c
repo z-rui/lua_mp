@@ -77,8 +77,8 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 
 				num = mpq_numref((mpq_ptr) p);
 				den = mpq_denref((mpq_ptr) p);
-				if (mpz_sgn(den) != 0 && mpz_divisible_p(num, den)) {
-					mpz_divexact(z, num, den);
+				if (mpz_cmp_si(den, 1) == 0) {
+					mpz_set(z, num);
 				} else {
 					goto error;
 				}
