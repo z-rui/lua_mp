@@ -26,12 +26,14 @@ static mp$_ptr _checkmp$(lua_State *L, int i, int raise)
 	z = (raise) ? luaL_checkudata(L, i, "mp$_t")
 		    : luaL_testudata(L, i, "mp$_t");
 #ifdef MPZ
-	if (lua_getuservalue(L, i) == LUA_TUSERDATA
-		&& luaL_testudata(L, -1, "mpq_t")) {
-		/* partial ref */
-		z = *(mp$_ptr *) z;
+	if (z) {
+		if (lua_getuservalue(L, i) == LUA_TUSERDATA
+			&& luaL_testudata(L, -1, "mpq_t")) {
+			/* partial ref */
+			z = *(mp$_ptr *) z;
+		}
+		lua_pop(L, 1); /* remove uservalue */
 	}
-	lua_pop(L, 1); /* remove uservalue */
 #endif
 	return (mp$_ptr) z;
 }
