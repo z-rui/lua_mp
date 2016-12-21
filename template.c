@@ -459,10 +459,10 @@ static int z_fac(lua_State *L)
 	unsigned long n, m;
 
 	z = _checkmpz(L, 1, 1);
-	n = _checkulong(L, 2);
+	n = _castulong(L, 2);
 	if (lua_isnone(L, 3))
 		goto simple;
-	m = _checkulong(L, 3);
+	m = _castulong(L, 3);
 	switch (m) {
 		case 1:
 simple:
@@ -486,7 +486,7 @@ static int z_bin(lua_State *L)
 
 	z = _checkmpz(L, 1, 1);
 	n = _tompz(L, 2);
-	k = _checkulong(L, 3);
+	k = _castulong(L, 3);
 	mpz_bin_ui(z, n, k);
 	lua_settop(L, 1);
 	return 1;
@@ -498,7 +498,7 @@ static int z_fib(lua_State *L)
 	unsigned long n;
 
 	z = _checkmpz(L, 1, 1);
-	n = _checkulong(L, 2);
+	n = _castulong(L, 2);
 	if (lua_isnone(L, 3)) {
 		mpz_fib_ui(z, n);
 		lua_settop(L, 1);
@@ -568,7 +568,7 @@ static int z_pow(lua_State *L)
 
 	z = _checkmpz(L, 1, 1);
 	base = _tompz(L, 2);
-	exp = _checkulong(L, 3);
+	exp = _castulong(L, 3);
 
 	mpz_pow_ui(z, base, exp);
 	lua_settop(L, 1);
@@ -582,7 +582,7 @@ static int z_root(lua_State *L)
 
 	root = _checkmpz(L, 1, 1);
 	z = _tompz(L, 2);
-	n = _checkulong(L, 3);
+	n = _castulong(L, 3);
 	if (lua_isnone(L, 4)) {
 		mpz_root(root, z, n);
 		lua_settop(L, 1);
