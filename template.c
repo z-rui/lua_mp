@@ -748,6 +748,7 @@ static int z_powm(lua_State *L)
 	a = _tompz(L, 2);
 	val = lua_tointegerx(L, 3, &isnum);
 	c = _tompz(L, 4);
+	_check_divisor(L, c);
 	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
 		mpz_powm_ui(r, a, val, c);
 	} else {
