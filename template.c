@@ -621,6 +621,36 @@ static int z_gcdext(lua_State *L)
 	return top-2;
 }
 
+static int z__symbol(lua_State *L, int (*op)(mpz_srcptr, mpz_srcptr))
+{
+	mpz_ptr a, b;
+	int res;
+
+	a = _tompz(L, 1);
+	b = _tompz(L, 2);
+	res = (*op)(a, b);
+	lua_pushinteger(L, res);
+	return 1;
+}
+
+static int z_jacobi(lua_State *L) { return z__symbol(L, mpz_jacobi); }
+static int z_legendre(lua_State *L) { return z__symbol(L, mpz_legendre); }
+static int z_kronecker(lua_State *L) { return z__symbol(L, mpz_kronecker); }
+
+static int z_remove(lua_State *L)
+{
+	mpz_ptr r, a, b;
+	mp_bitcnt_t res;
+
+	r = _checkmpz(L, 1, 1);
+	a = _tompz(L, 2);
+	b = _tompz(L, 3);
+	res = mpz_remove(r, a, b);
+	lua_settop(L, 1);
+	lua_pushinteger(L, res);
+	return 2;
+}
+
 static int z_fac(lua_State *L)
 {
 	mpz_ptr z;
@@ -647,6 +677,18 @@ simple:
 	return 1;
 }
 
+static int z_primorial(lua_State *L)
+{
+	mpz_ptr z;
+	unsigned long n;
+
+	z = _checkmpz(L, 1, 1);
+	n = _castulong(L, 2);
+	mpz_primorial_ui(z, n);
+	lua_settop(L, 1);
+	return 1;
+}
+
 static int z_bin(lua_State *L)
 {
 	mpz_ptr z, n;
@@ -660,7 +702,10 @@ static int z_bin(lua_State *L)
 	return 1;
 }
 
-static int z_fib(lua_State *L)
+static int z__special_seq(
+	lua_State *L,
+	void (*fun)(mpz_ptr, unsigned long),
+	void (*fun2)(mpz_ptr, mpz_ptr, unsigned long))
 {
 	mpz_ptr z, z1;
 	unsigned long n;
@@ -668,17 +713,20 @@ static int z_fib(lua_State *L)
 	z = _checkmpz(L, 1, 1);
 	n = _castulong(L, 2);
 	if (lua_isnone(L, 3)) {
-		mpz_fib_ui(z, n);
+		(*fun)(z, n);
 		lua_settop(L, 1);
 		return 1;
 	} else {
 		z1 = _checkmpz(L, 3, 1);
-		mpz_fib2_ui(z, z1, n);
+		(*fun2)(z, z1, n);
 		lua_rotate(L, 2, -1);
 		lua_settop(L, 2);
 		return 2;
 	}
 }
+
+static int z_fib(lua_State *L) { return z__special_seq(L, mpz_fib_ui, mpz_fib2_ui); }
+static int z_lucnum(lua_State *L) { return z__special_seq(L, mpz_lucnum_ui, mpz_lucnum2_ui); }
 
 static int z_invert(lua_State *L)
 {
@@ -987,9 +1035,15 @@ static const luaL_Reg $_Reg[] =
 	METHOD_ALIAS(gcd, gcdext),
 	METHOD(lcm),
 	METHOD(probab_prime_p),
+	METHOD(remove),
+	METHOD(jacobi),
+	METHOD(legendre),
+	METHOD(kronecker),
 	METHOD(fac),
+	METHOD(primorial),
 	METHOD(bin),
 	METHOD(fib),
+	METHOD(lucnum),
 	METHOD(invert),
 	METHOD(powm),
 
