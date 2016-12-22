@@ -87,7 +87,7 @@ static int rand_urandomm(lua_State *L)
 	return rand__urandom(L, gmp_urandomm_ui);
 }
 
-luaL_Reg rand_reg[] = {
+static luaL_Reg rand_reg[] = {
 	{ "init", rand_init },
 	{ "seed", rand_seed },
 	{ "urandomb", rand_urandomb },
