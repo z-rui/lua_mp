@@ -666,6 +666,47 @@ static int z_sqrt(lua_State *L)
 		return 2;
 	}
 }
+
+static int z_urandomb(lua_State *L)
+{
+	mpz_ptr r;
+	gmp_randstate_t *state;
+	mp_bitcnt_t n;
+
+	r = _checkmpz(L, 1, 1);
+	state = luaL_checkudata(L, 2, "gmp_randstate_t");
+	n = _castbitcnt(L, 3);
+	mpz_urandomb(r, *state, n);
+	lua_settop(L, 1);
+	return 1;
+}
+
+static int z_urandomm(lua_State *L)
+{
+	mpz_ptr r, n;
+	gmp_randstate_t *state;
+
+	r = _checkmpz(L, 1, 1);
+	state = luaL_checkudata(L, 2, "gmp_randstate_t");
+	n = _checkmpz(L, 3, 1);
+	mpz_urandomm(r, *state, n);
+	lua_settop(L, 1);
+	return 1;
+}
+
+static int z_rrandomb(lua_State *L)
+{
+	mpz_ptr r;
+	gmp_randstate_t *state;
+	mp_bitcnt_t n;
+
+	r = _checkmpz(L, 1, 1);
+	state = luaL_checkudata(L, 2, "gmp_randstate_t");
+	n = _castbitcnt(L, 3);
+	mpz_rrandomb(r, *state, n);
+	lua_settop(L, 1);
+	return 1;
+}
 #endif
 #ifdef MPQ /* rational specfic functions */
 OP_DCL(binop, add)
@@ -845,6 +886,10 @@ static const luaL_Reg $_Reg[] =
 	METHOD(divisible_p),
 
 	METHOD(sizeinbase),
+
+	METHOD(urandomb),
+	METHOD(urandomm),
+	METHOD(rrandomb),
 #elif defined(MPQ)
 	METHOD(div),
 	METHOD(inv),
