@@ -380,6 +380,83 @@ OP_DCL(binop, and)
 OP_DCL(binop, ior)
 OP_DCL(binop, xor)
 
+static void z_push_bitcnt_res(lua_State *L, mp_bitcnt_t res)
+{
+	if (!~res) {
+		/* res is the "largest possible" mp_bitcnt_t,
+		 * i.e. all 1s in binary form */
+		lua_pushnil(L);
+	} else {
+		lua_pushinteger(L, res);
+	}
+}
+
+static int z_popcount(lua_State *L)
+{
+	mpz_ptr z;
+	mp_bitcnt_t res;
+
+	z = _tompz(L, 1);
+	res = mpz_popcount(z);
+	z_push_bitcnt_res(L, res);
+	return 1;
+}
+
+static int z_hamdist(lua_State *L)
+{
+	mpz_ptr a, b;
+	mp_bitcnt_t res;
+
+	a = _tompz(L, 1);
+	b = _tompz(L, 2);
+	res = mpz_hamdist(a, b);
+	z_push_bitcnt_res(L, res);
+	return 1;
+}
+
+static int z_scan(lua_State *L)
+{
+	mpz_ptr z;
+	int what;
+	mp_bitcnt_t starting_bit, res;
+
+	z = _tompz(L, 1);
+	what = luaL_checkinteger(L, 2);
+	luaL_argcheck(L, what == 0 || what == 1, 2, "expect 0 or 1");
+	starting_bit = _castbitcnt(L, 3);
+	res = (what) ? mpz_scan1(z, starting_bit) : mpz_scan0(z, starting_bit);
+	z_push_bitcnt_res(L, res);
+	return 1;
+}
+
+static int z__change_bit(lua_State *L, void (*op)(mpz_ptr, mp_bitcnt_t))
+{
+	mpz_ptr z;
+	mp_bitcnt_t bit_index;
+
+	z = _checkmpz(L, 1, 1);
+	bit_index = _castbitcnt(L, 2);
+	(*op)(z, bit_index);
+	return 0;
+}
+
+static int z_setbit(lua_State *L) { return z__change_bit(L, mpz_setbit); }
+static int z_clrbit(lua_State *L) { return z__change_bit(L, mpz_clrbit); }
+static int z_combit(lua_State *L) { return z__change_bit(L, mpz_combit); }
+
+static int z_tstbit(lua_State *L)
+{
+	mpz_ptr z;
+	mp_bitcnt_t bit_index;
+	int res;
+
+	z = _tompz(L, 1);
+	bit_index = _castbitcnt(L, 2);
+	res = mpz_tstbit(z, bit_index);
+	lua_pushboolean(L, res);
+	return 1;
+}
+
 static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), void (*fun_ui)(mp$_ptr, mp$_srcptr, unsigned long))
 {
 	mp$_ptr r, a;
@@ -920,6 +997,13 @@ static const luaL_Reg $_Reg[] =
 	METHOD_ALIAS(bor, ior),
 	METHOD_ALIAS(bxor, xor),
 	METHOD_ALIAS(bnot, com),
+	METHOD(popcount),
+	METHOD(hamdist),
+	METHOD(scan),
+	METHOD(setbit),
+	METHOD(clrbit),
+	METHOD(combit),
+	METHOD(tstbit),
 
 	METHOD(even_p),
 	METHOD(odd_p),
