@@ -266,7 +266,11 @@ q_cmp_z:
 #elif defined(MPZ)
 		ret = mpz_cmp_si(a, si);
 	} else if (!isint && lua_isnumber(L, 2)) {
-		ret = mpz_cmp_d(a, lua_tonumber(L, 2));
+		lua_Number val;
+
+		val = lua_tonumber(L, 2);
+		luaL_argcheck(L, val == val, 2, "NaN");
+		ret = mpz_cmp_d(a, val);
 #endif
 	} else { /* general case */
 		b = _tomp$(L, 2);
