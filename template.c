@@ -283,6 +283,17 @@ q_cmp_q:
 	return 1;
 }
 
+static int $_sgn(lua_State *L)
+{
+	mp$_ptr z;
+
+	/* Careful, mp$_sgn is a macro that evaluate its
+	 * argument multiple times */
+	z = _tomp$(L, 1);
+	lua_pushinteger(L, mp$_sgn(z));
+	return 1;
+}
+
 static int $_swap(lua_State *L)
 {
 	mp$_ptr a, b;
@@ -882,6 +893,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(div_2exp),
 
 	METHOD(cmp),
+	METHOD(sgn),
 #if defined(MPZ)
 	METHOD(cmpabs),
 
