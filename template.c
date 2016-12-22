@@ -621,21 +621,17 @@ static int z_gcdext(lua_State *L)
 	return top-2;
 }
 
-static int z__symbol(lua_State *L, int (*op)(mpz_srcptr, mpz_srcptr))
+static int z_jacobi(lua_State *L)
 {
 	mpz_ptr a, b;
 	int res;
 
 	a = _tompz(L, 1);
 	b = _tompz(L, 2);
-	res = (*op)(a, b);
+	res = mpz_jacobi(a, b);
 	lua_pushinteger(L, res);
 	return 1;
 }
-
-static int z_jacobi(lua_State *L) { return z__symbol(L, mpz_jacobi); }
-static int z_legendre(lua_State *L) { return z__symbol(L, mpz_legendre); }
-static int z_kronecker(lua_State *L) { return z__symbol(L, mpz_kronecker); }
 
 static int z_remove(lua_State *L)
 {
@@ -1037,8 +1033,6 @@ static const luaL_Reg $_Reg[] =
 	METHOD(probab_prime_p),
 	METHOD(remove),
 	METHOD(jacobi),
-	METHOD(legendre),
-	METHOD(kronecker),
 	METHOD(fac),
 	METHOD(primorial),
 	METHOD(bin),
