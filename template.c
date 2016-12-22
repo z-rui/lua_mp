@@ -292,12 +292,11 @@ static int $_swap(lua_State *L)
 static int $_mul_2exp(lua_State *L)
 {
 	mp$_ptr a, b;
-	lua_Integer n;
+	mp_bitcnt_t n;
 
 	a = _checkmp$(L, 1, 1);
 	b = _tomp$(L, 2);
-	n = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, n >= 0, 3, "expect non-negative");
+	n = _castbitcnt(L, 3);
 	mp$_mul_2exp(a, b, n);
 	lua_settop(L, 1);
 	return 1;
@@ -322,15 +321,14 @@ static int $_div_2exp(lua_State *L)
 	int mode;
 #endif
 	mp$_ptr r, a;
-	lua_Integer b;
+	mp_bitcnt_t b;
 
 #ifdef MPZ
 	mode = luaL_checkoption(L, 4, "fq", z_div_lst);
 #endif
 	r = _checkmp$(L, 1, 1);
 	a = _tomp$(L, 2);
-	b = luaL_checkinteger(L, 3);
-	luaL_argcheck(L, b >= 0, 3, "expect non-negative");
+	b = _castbitcnt(L, 3);
 #ifdef MPZ
 	(*ops[mode])(r, a, b);
 #else

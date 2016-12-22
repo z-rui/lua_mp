@@ -49,6 +49,16 @@ static unsigned long _castulong(lua_State *L, int i)
 	return (unsigned long) val;
 }
 
+static mp_bitcnt_t _castbitcnt(lua_State *L, int i)
+{
+	lua_Unsigned val;
+
+	val = (lua_Unsigned) luaL_checkinteger(L, i);
+	luaL_argcheck(L, CAN_HOLD(mp_bitcnt_t, val), i,
+			"mp_bitcnt_t overflow");
+	return (mp_bitcnt_t) val;
+}
+
 static FILE *_checkfile(lua_State *L, int i)
 {
 	luaL_Stream *fs;
