@@ -8,10 +8,10 @@ SO=mp.so
 all: $(SO)
 
 mpz.c: template.c
-	$(CPP) -DMPZ $< | sed 's/\$$/z/g' > $@
+	$(CPP) -DMPZ $< | tr '$$' 'z' > $@
 
 mpq.c: template.c
-	$(CPP) -DMPQ $< | sed 's/\$$/q/g' > $@
+	$(CPP) -DMPQ $< | tr '$$' 'q' > $@
 
 $(SO): mp.c mpz.c mpq.c rand.c
 	$(CC) $(CFLAGS) -shared -o $@ $< $(LIBS)
