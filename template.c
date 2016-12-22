@@ -434,6 +434,30 @@ static int z_sizeinbase(lua_State *L)
 	return 1;
 }
 
+static int z_cmpabs(lua_State *L)
+{
+	mpz_ptr a, b;
+	int ret, isint;
+	lua_Integer ui;
+
+	a = _checkmp$(L, 1, 1);
+	ui = lua_tointegerx(L, 2, &isint);
+	if (isint && ui >= 0 && CAN_HOLD(unsigned long, ui)) {
+		ret = mpz_cmpabs_ui(a, ui);
+	} else if (!isint && lua_isnumber(L, 2)) {
+		lua_Number val;
+
+		val = lua_tonumber(L, 2);
+		luaL_argcheck(L, val == val, 2, "NaN");
+		ret = mpz_cmpabs_d(a, val);
+	} else { /* general case */
+		b = _tomp$(L, 2);
+		ret = mp$_cmpabs(a, b);
+	}
+	lua_pushinteger(L, ret);
+	return 1;
+}
+
 static int z_idiv(lua_State *L)
 {
 	int mode;
@@ -859,6 +883,8 @@ static const luaL_Reg $_Reg[] =
 
 	METHOD(cmp),
 #if defined(MPZ)
+	METHOD(cmpabs),
+
 	METHOD(addmul),
 	METHOD(submul),
 	METHOD_ALIAS(div, idiv),
