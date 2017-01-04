@@ -316,6 +316,9 @@ static int $_tonumber(lua_State *L)
 		return 1;
 	}
 #endif
+#ifdef MPQ
+	q_checksanity(L, 1, z);
+#endif
 	val = mp$_get_d(z);
 	lua_pushnumber(L, val);
 	return 1;
