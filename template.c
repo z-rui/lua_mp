@@ -365,7 +365,7 @@ q_cmp_z:
 		ret = mpq_cmp_z(a, b);
 #elif defined(MPZ) || defined(MPF)
 		ret = mp$_cmp_si(a, si);
-	} else if (!isint && lua_isnumber(L, 2)) {
+	} else if (!isint && lua_type(L, 2) == LUA_TNUMBER) {
 		lua_Number val;
 
 		val = lua_tonumber(L, 2);
