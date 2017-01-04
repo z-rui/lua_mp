@@ -478,9 +478,6 @@ static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); 
 OP_UI(add)
 OP_UI(sub)
 OP_UI(mul)
-#ifdef MPF
-OP_UI(div)
-#endif
 #endif
 
 #if defined(MPZ) /* integer specific functions */
@@ -1057,6 +1054,28 @@ static int f_set_prec(lua_State *L)
 	return 0;
 }
 
+static int f_div(lua_State *L)
+{
+	mpf_ptr r, a, b;
+	lua_Integer val;
+	int isnum;
+
+	r = _checkmp$(L, 1, 1);
+	a = _tomp$(L, 2);
+	val = lua_tointegerx(L, 3, &isnum);
+	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
+		if (val == 0) goto divzero;
+		mpf_div_ui(r, a, val);
+	} else {
+		b = _tompf(L, 3);
+		if (mpf_sgn(b) == 0) goto divzero;
+		mpf_div(r, a, b);
+	}
+	lua_settop(L, 1);
+	return 1;
+divzero:
+	return luaL_error(L, "division by zero");
+}
 #endif
 
 static int $_inp_str(lua_State *L)
