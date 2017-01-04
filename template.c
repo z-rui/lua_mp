@@ -1076,6 +1076,37 @@ static int f_div(lua_State *L)
 divzero:
 	return luaL_error(L, "division by zero");
 }
+
+static int f_sqrt(lua_State *L)
+{
+	mpf_ptr r, a;
+	lua_Integer val;
+	int isnum;
+
+	r = _checkmp$(L, 1, 1);
+	val = lua_tointegerx(L, 2, &isnum);
+	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
+		mpf_sqrt_ui(r, val);
+	} else {
+		a = _tompf(L, 2);
+		mpf_sqrt(r, a);
+	}
+	lua_settop(L, 1);
+	return 1;
+}
+
+static int f_pow(lua_State *L)
+{
+	mpf_ptr r, a;
+	lua_Integer b;
+
+	r = _checkmp$(L, 1, 1);
+	a = _tomp$(L, 2);
+	b = _castulong(L, 3);
+	mpf_pow_ui(r, a, b);
+	lua_settop(L, 1);
+	return 1;
+}
 #endif
 
 static int $_inp_str(lua_State *L)
@@ -1210,6 +1241,8 @@ static const luaL_Reg $_Reg[] =
 	METHOD(div),
 	METHOD(set_prec),
 	METHOD(get_prec),
+	METHOD(pow),
+	METHOD(sqrt),
 #endif
 	METHOD(inp_str),
 	METHOD(out_str),
