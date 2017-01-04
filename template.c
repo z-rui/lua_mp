@@ -187,12 +187,14 @@ static int $_set(lua_State *L)
 	mp$_ptr z;
 
 	z = _checkmp$(L, 1, 1);
-	if (lua_type(L, 2) == LUA_TSTRING) {
+	if (!lua_isnoneornil(L, 2)) {
 		int base;
-		/* set(str, base) */
+		/* 2 arguments: set(str, base) */
+		luaL_checkstring(L, 2);
 		base = _check_inbase(L, 3);
 		$__set_str(L, z, 2, base);
 	} else {
+		/* 1 argument set(value) */
 		$__set(L, 2, z);
 	}
 	lua_settop(L, 1);
@@ -204,7 +206,7 @@ static int $_call(lua_State *L)
 #ifdef MPF
 	mp_bitcnt_t prec;
 
-	if (lua_isnone(L, 4))
+	if (lua_isnoneornil(L, 4))
 		prec = f__get_default_prec(L);
 	else
 		prec = _castbitcnt(L, 4);
