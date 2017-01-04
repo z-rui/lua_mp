@@ -1,9 +1,34 @@
+#ifdef MPF
+static mp_bitcnt_t f__get_default_prec(lua_State *L)
+{
+	lua_Integer val;
+	int isint;
+
+	luaL_getmetatable(L, "mp$_t");
+	lua_getfield(L, -1, "__index"); /* lib table */
+	lua_getfield(L, -1, "precision");
+	if (lua_isnil(L, -1))
+		luaL_error(L, "default precision is not set");
+	val = lua_tointegerx(L, -1, &isint);
+	if (!isint || !CAN_HOLD(mp_bitcnt_t, val))
+		luaL_error(L, "precision cannot be represented as mp_bitcnt_t");
+	lua_pop(L, 3); /* metatable, lib table and precision */
+	return (mp_bitcnt_t) val;
+}
+
+static mpf_ptr f_new(lua_State *L, mp_bitcnt_t prec)
+#else
 static mp$_ptr $_new(lua_State *L)
+#endif
 {
 	mp$_ptr z = lua_newuserdata(L, sizeof (mp$_t));
 	if (luaL_getmetatable(L, "mp$_t") == LUA_TNIL)
 		luaL_error(L, "mp$_t not registered");
+#ifdef MPF
+	mpf_init2(z, prec);
+#else
 	mp$_init(z);
+#endif
 	lua_setmetatable(L, -2);
 	return z;
 }
@@ -12,6 +37,8 @@ static mp$_ptr $_new(lua_State *L)
 # define MPNAME "integer"
 #elif defined(MPQ)
 # define MPNAME "rational"
+#elif defined(MPF)
+# define MPNAME "float"
 #endif
 
 static void $__set_str(lua_State *L, mp$_ptr z, int i, int base)
@@ -24,16 +51,16 @@ static void $__set_str(lua_State *L, mp$_ptr z, int i, int base)
 	}
 }
 
-#ifdef MPZ
-static void z__set_int(lua_State *L, mpz_ptr z, int i)
+#if defined(MPZ) || defined(MPF)
+static void $__set_int(lua_State *L, mp$_ptr z, int i)
 {
 	lua_Integer val;
 
 	val = lua_tonumber(L, i);
 	if (CAN_HOLD(long, val)) {
-		mpz_set_si(z, (long) val);
+		mp$_set_si(z, (long) val);
 	} else {
-		z__set_str(L, z, i, 0);
+		$__set_str(L, z, i, 0);
 	}
 }
 #endif
@@ -64,10 +91,14 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 #if defined(MPZ)
 			luaL_checkinteger(L, i);
 			z__set_int(L, z, i);
-#elif defined(MPQ)
+#elif defined(MPQ) || defined(MPF)
 			if (lua_isinteger(L, i)) {
+#ifdef MPQ
 				z__set_int(L, mpq_numref(z), i);
 				mpz_set_si(mpq_denref(z), 1);
+#else /* MPF */
+				f__set_int(L, z, i);
+#endif
 			} else {
 				lua_Number val;
 
@@ -87,8 +118,8 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 			if ((p = _checkmpz(L, i, 0)) != 0) {
 #if defined(MPZ)
 				mpz_set(z, p);
-#elif defined(MPQ)
-				mpq_set_z(z, p);
+#elif defined(MPQ) || defined(MPF)
+				mp$_set_z(z, p);
 #endif
 			} else if ((p = _checkmpq(L, i, 0)) != 0) {
 #if defined(MPZ)
@@ -103,6 +134,19 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 				}
 #elif defined(MPQ)
 				mpq_set(z, p);
+#elif defined(MPF)
+				mpf_set_q(z, p);
+#endif
+			} else if ((p = _checkmpf(L, i, 0)) != 0) {
+#if defined(MPZ)
+				if (!mpf_integer_p(p)) {
+					goto error;
+				}
+#endif
+#if defined(MPZ) || defined(MPQ)
+				mp$_set_f(z, p);
+#elif defined(MPF)
+				mpf_set(z, p);
 #endif
 			} else {
 				goto error;
@@ -129,7 +173,11 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 
 	if ((z = _checkmp$(L, i, 0)) == 0) {
 		luaL_checkany(L, i);
+#ifdef MPF
+		z = f_new(L, f__get_default_prec(L));
+#else
 		z = $_new(L);
+#endif
 		$__set(L, i, z);
 		lua_replace(L, i);
 	}
@@ -158,7 +206,17 @@ static int $_set(lua_State *L)
 
 static int $_call(lua_State *L)
 {
+#ifdef MPF
+	mp_bitcnt_t prec;
+
+	if (lua_isnone(L, 3))
+		prec = f__get_default_prec(L);
+	else
+		prec = _castbitcnt(L, 3);
+	f_new(L, prec);
+#else
 	$_new(L);
+#endif
 	lua_replace(L, 1); /* replace the 'self' argument (the table) */
 	if (lua_gettop(L) > 1)
 		return $_set(L);
@@ -182,6 +240,10 @@ static int $_tostring(lua_State *L)	/** tostring(x) */
 	luaL_Buffer B;
 	size_t sz;
 	char *s;
+#ifdef MPF
+	size_t n_digits;
+	mp_exp_t exp;
+#endif
 
 	z = _checkmp$(L, 1, 1);
 	base = _check_outbase(L, 2);
@@ -191,10 +253,28 @@ static int $_tostring(lua_State *L)	/** tostring(x) */
 	sz = mpz_sizeinbase(mpq_numref(z), abs(base))
 	   + mpz_sizeinbase(mpq_denref(z), abs(base))
 	   + 3;
+#elif defined(MPF)
+	n_digits = (size_t) luaL_optinteger(L, 3, 0);
+	sz = n_digits + 4; /* "-0.\0" */
 #endif
-	s = mp$_get_str(luaL_buffinitsize(L, &B, sz), base, z);
-
+	s = luaL_buffinitsize(L, &B, sz);
+#ifdef MPF
+	mpf_get_str(s+2, &exp, base, n_digits, z);
+	if (s[2] == '-') {
+		memcpy(s, "-0.", 3);
+	} else {
+		memcpy(s, "0.", 2);
+	}
+	luaL_addsize(&B, strlen(s));
+	luaL_addchar(&B, (base < -10 || base > 10) ? '@' : 'e');
+	lua_pushfstring(L, "%I", (lua_Integer) exp);
+	luaL_addvalue(&B);
+	luaL_pushresult(&B);
+#else
+	mp$_get_str(s, base, z);
 	luaL_pushresultsize(&B, strlen(s));
+#endif
+
 	return 1;
 }
 
@@ -263,14 +343,14 @@ overflow_long:
 	} else if ((b = _checkmpz(L, 2, 0))) {
 q_cmp_z:
 		ret = mpq_cmp_z(a, b);
-#elif defined(MPZ)
-		ret = mpz_cmp_si(a, si);
+#elif defined(MPZ) || defined(MPF)
+		ret = mp$_cmp_si(a, si);
 	} else if (!isint && lua_isnumber(L, 2)) {
 		lua_Number val;
 
 		val = lua_tonumber(L, 2);
 		luaL_argcheck(L, val == val, 2, "NaN");
-		ret = mpz_cmp_d(a, val);
+		ret = mp$_cmp_d(a, val);
 #endif
 	} else { /* general case */
 		b = _tomp$(L, 2);
@@ -360,18 +440,47 @@ static int $_unop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr))
 	return 1;
 }
 
+#ifndef MPF
 static int $_binop(lua_State *L, void (*op)(mp$_ptr, mp$_srcptr, mp$_srcptr))
 {
 	(*op)(_checkmp$(L, 1, 1), _tomp$(L, 2), _tomp$(L, 3));
 	lua_settop(L, 1);
 	return 1;
 }
+#endif
 
 #define OP_DCL(typ, fun) \
 static int $_##fun(lua_State *L) { return $_##typ(L, mp$_##fun); }
 
 OP_DCL(unop, abs)
 OP_DCL(unop, neg)
+
+#if defined(MPZ) || defined(MPF)
+static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), void (*fun_ui)(mp$_ptr, mp$_srcptr, unsigned long))
+{
+	mp$_ptr r, a;
+	lua_Integer val;
+	int isnum;
+
+	r = _checkmp$(L, 1, 1);
+	a = _tomp$(L, 2);
+	val = lua_tointegerx(L, 3, &isnum);
+	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
+		(*fun_ui)(r, a, val);
+	} else {
+		(*fun)(r, a, _tomp$(L, 3));
+	}
+	lua_settop(L, 1);
+	return 1;
+}
+
+#define OP_UI(fun) \
+static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
+
+OP_UI(add)
+OP_UI(sub)
+OP_UI(mul)
+#endif
 
 #ifdef MPZ /* integer specific functions */
 OP_DCL(unop, nextprime)
@@ -457,30 +566,6 @@ static int z_tstbit(lua_State *L)
 	return 1;
 }
 
-static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), void (*fun_ui)(mp$_ptr, mp$_srcptr, unsigned long))
-{
-	mp$_ptr r, a;
-	lua_Integer val;
-	int isnum;
-
-	r = _checkmp$(L, 1, 1);
-	a = _tomp$(L, 2);
-	val = lua_tointegerx(L, 3, &isnum);
-	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
-		(*fun_ui)(r, a, val);
-	} else {
-		(*fun)(r, a, _tomp$(L, 3));
-	}
-	lua_settop(L, 1);
-	return 1;
-}
-
-#define OP_UI(fun) \
-static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); }
-
-OP_UI(add)
-OP_UI(sub)
-OP_UI(mul)
 OP_UI(divexact)
 OP_UI(lcm)
 
@@ -974,12 +1059,20 @@ static int $_out_str(lua_State *L)
 	FILE *f;
 	int base;
 	size_t n;
+#ifdef MPF
+	size_t digits;
+#endif
 
 	z = _checkmp$(L, 1, 1);
 	f = _checkfile(L, 2);
 	base = _check_outbase(L, 3);
-
+#ifdef MPF
+	digits = (size_t) luaL_optinteger(L, 4, 0);
+	n = mp$_out_str(f, base, digits, z);
+#else
 	n = mp$_out_str(f, base, z);
+#endif
+
 	lua_pushinteger(L, (lua_Integer) n);
 	return 1;
 }

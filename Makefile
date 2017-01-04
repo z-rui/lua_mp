@@ -13,6 +13,9 @@ mpz.c: template.c
 mpq.c: template.c
 	$(CPP) -DMPQ $< | tr '$$' 'q' > $@
 
-$(SO): mp.c mpz.c mpq.c rand.c
+mpf.c: template.c
+	$(CPP) -DMPF $< | tr '$$' 'f' > $@
+
+$(SO): mp.c mpz.c mpq.c mpf.c rand.c
 	$(CC) $(CFLAGS) -shared -o $@ $< $(LIBS)
 

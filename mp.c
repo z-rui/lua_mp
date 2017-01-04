@@ -102,9 +102,11 @@ static int _check_inbase(lua_State *L, int i)
 
 static mpz_ptr _checkmpz(lua_State *L, int, int);
 static mpq_ptr _checkmpq(lua_State *L, int, int);
+static mpf_ptr _checkmpf(lua_State *L, int, int);
 
 #include "mpz.c"
 #include "mpq.c"
+#include "mpf.c"
 #include "rand.c"
 
 LUALIB_API int luaopen_mp(lua_State *L)
@@ -116,6 +118,8 @@ LUALIB_API int luaopen_mp(lua_State *L)
 	lua_setfield(L, -2, "z");
 	luaL_requiref(L, "mp.q", luaopen_mp_q, 0);
 	lua_setfield(L, -2, "q");
+	luaL_requiref(L, "mp.f", luaopen_mp_f, 0);
+	lua_setfield(L, -2, "f");
 	luaL_requiref(L, "mp.rand", luaopen_mp_rand, 0);
 	lua_setfield(L, -2, "rand");
 
