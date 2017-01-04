@@ -7,8 +7,6 @@ static mp_bitcnt_t f__get_default_prec(lua_State *L)
 	luaL_getmetatable(L, "mp$_t");
 	lua_getfield(L, -1, "__index"); /* lib table */
 	lua_getfield(L, -1, "precision");
-	if (lua_isnil(L, -1))
-		luaL_error(L, "default precision is not set");
 	val = lua_tointegerx(L, -1, &isint);
 	if (!isint || !CAN_HOLD(mp_bitcnt_t, val))
 		luaL_error(L, "precision cannot be represented as mp_bitcnt_t");
@@ -1180,6 +1178,10 @@ LUALIB_API int luaopen_mp_$(lua_State *L)
 {
 	lua_pushcfunction(L, $_call);
 	luaL_newlib(L, $_Reg);
+#ifdef MPF
+	lua_pushinteger(L, 0);
+	lua_setfield(L, -2, "precision");
+#endif
 	luaL_newmetatable(L, "mp$_t");
 	luaL_setfuncs(L, $_Meta, 0);
 
