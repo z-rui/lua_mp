@@ -187,14 +187,14 @@ static int $_set(lua_State *L)
 	mp$_ptr z;
 
 	z = _checkmp$(L, 1, 1);
-	if (!lua_isnoneornil(L, 2)) {
+	if (!lua_isnoneornil(L, 3)) {
 		int base;
-		/* 2 arguments: set(str, base) */
+		/* 2 arguments: z:set(str, base) */
 		luaL_checkstring(L, 2);
 		base = _check_inbase(L, 3);
 		$__set_str(L, z, 2, base);
 	} else {
-		/* 1 argument set(value) */
+		/* 1 argument z:set(value) */
 		$__set(L, 2, z);
 	}
 	lua_settop(L, 1);
