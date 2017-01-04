@@ -32,10 +32,13 @@ function pidigits()
   end
 end
 
-local digits = pidigits()
+local nextdigit = pidigits()
 
-for i=1,15000 do
-  digits():out_str(io.stdout)
+nextdigit():out_str(io.stdout)
+io.write('.')
+
+for i=2,15000 do
+  nextdigit():out_str(io.stdout)
 end
 
 io.write('\n')
