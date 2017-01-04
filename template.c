@@ -1089,14 +1089,18 @@ static int f_sqrt(lua_State *L)
 
 	r = _checkmp$(L, 1, 1);
 	val = lua_tointegerx(L, 2, &isnum);
-	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
+	if (isnum && CAN_HOLD(unsigned long, val)) {
+		if (val < 0) goto domain;
 		mpf_sqrt_ui(r, val);
 	} else {
 		a = _tompf(L, 2);
+		if (mpf_sgn(a) < 0) goto domain;
 		mpf_sqrt(r, a);
 	}
 	lua_settop(L, 1);
 	return 1;
+domain:
+	return luaL_error(L, "domain error");
 }
 
 static int f_pow(lua_State *L)
