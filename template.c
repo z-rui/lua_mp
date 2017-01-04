@@ -483,7 +483,7 @@ OP_UI(div)
 #endif
 #endif
 
-#ifdef MPZ /* integer specific functions */
+#if defined(MPZ) /* integer specific functions */
 OP_DCL(unop, nextprime)
 OP_DCL(unop, com)
 OP_DCL(binop, and)
@@ -954,8 +954,7 @@ static int z_rrandomb(lua_State *L)
 	lua_settop(L, 1);
 	return 1;
 }
-#endif
-#ifdef MPQ /* rational specfic functions */
+#elif defined(MPQ) /* rational specfic functions */
 OP_DCL(binop, add)
 OP_DCL(binop, sub)
 OP_DCL(binop, mul)
@@ -1034,6 +1033,28 @@ static int $_equal(lua_State *L)
 	ret = mpq_equal(a, b);
 	lua_pushboolean(L, ret);
 	return 1;
+}
+#elif defined(MPF)
+static int f_get_prec(lua_State *L)
+{
+	mpf_ptr z;
+	mp_bitcnt_t prec;
+
+	z = _checkmpf(L, 1, 1);
+	prec = mpf_get_prec(z);
+	lua_pushinteger(L, (lua_Integer) prec);
+	return 1;
+}
+
+static int f_set_prec(lua_State *L)
+{
+	mpf_ptr z;
+	mp_bitcnt_t prec;
+
+	z = _checkmpf(L, 1, 1);
+	prec = _castbitcnt(L, 2);
+	mpf_set_prec(z, prec);
+	return 0;
 }
 
 #endif
@@ -1168,6 +1189,8 @@ static const luaL_Reg $_Reg[] =
 	METHOD(equal),
 #elif defined(MPF)
 	METHOD(div),
+	METHOD(set_prec),
+	METHOD(get_prec),
 #endif
 	METHOD(inp_str),
 	METHOD(out_str),
