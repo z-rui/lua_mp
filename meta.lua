@@ -1,78 +1,105 @@
 local mp = require('mp')
-local z, q = mp.z, mp.q
+local z, q, f = mp.z, mp.q, mp.f
 
 local getmetatable = getmetatable
 
 local Z = getmetatable(z())
 local Q = getmetatable(q())
+local F = getmetatable(f())
 
-local function mp_op(constructor, fun)
-  return function(...)
-    return fun(constructor(), ...)
+local mptypes = {z, f, q, [Z] = 1, [F] = 2, [Q] = 3}
+local function mphier(x)
+  return mptypes[getmetatable(x)] or 0
+end
+local function promote(a, b)
+  local h1, h2 = mphier(a), mphier(b)
+  if h1 < h2 then
+    return mptypes[h2], b
   end
+  return mptypes[h1], a
 end
 
 -- type-generic binary operators (+, -, *)
 local function tg_binop(fname)
   return function(a, b)
-    local t = z
-    if getmetatable(b) == Q then
-      t = q
+    local T = promote(a, b)
+    return T[fname](T(), a, b)
+  end
+end
+
+local tgadd = tg_binop "add"
+local tgsub = tg_binop "sub"
+local tgmul = tg_binop "mul"
+local tgdiv = tg_binop "div"
+
+Z.__add = tgadd
+Z.__sub = tgsub
+Z.__mul = tgmul
+
+function Z.__div(a, b)
+  if mphier(a) <= 1 and mphier(b) <= 1 then
+    -- Z / Z is special case
+    return q():div(a, b)
+  end
+  return tgdiv(a, b)
+end
+
+Q.__add = tgadd
+Q.__sub = tgsub
+Q.__mul = tgmul
+Q.__div = tgdiv
+
+F.__add = tgadd
+F.__sub = tgsub
+F.__mul = tgmul
+F.__div = tgdiv
+
+local function register(mt, list)
+  local T = mt.__index
+  for metamethod, fname in pairs(list) do
+    local fun = T[fname]
+    mt[metamethod] = function(...)
+      return fun(T(), ...)
     end
-    return t[fname](t(), a, b)
   end
 end
-Z.__add = tg_binop "add"
-Z.__sub = tg_binop "sub"
-Z.__mul = tg_binop "mul"
--- division always gives a rational
-Z.__div = mp_op(q, q.div)
 
-local z_ops = {
-  __unm  = z.neg,
-  __idiv = z.div,
-  __mod  = z.mod,
-  __pow  = z.pow,
-  __band = z.band,
-  __bor  = z.bor,
-  __bxor = z.bxor,
-  __bnot = z.bnot,
-  __shl  = z.mul_2exp,
-  __shr  = z.div_2exp,
-}
+register(Z, {
+  __unm  = "neg",
+  __idiv = "div",
+  __mod  = "mod",
+  __pow  = "pow",
+  __band = "band",
+  __bor  = "bor",
+  __bxor = "bxor",
+  __bnot = "bnot",
+  __shl  = "mul_2exp",
+  __shr  = "div_2exp",
+})
 
-local q_ops = {
-  __unm  = q.neg,
-  __add  = q.add,
-  __sub  = q.sub,
-  __mul  = q.mul,
-  __div  = q.div,
-}
+register(Q, {
+  __unm = "neg",
+  __shl = "mul_2exp",
+  __shr = "div_2exp",
+})
 
-for name, fun in pairs(z_ops) do
-  Z[name] = mp_op(z, fun)
-end
+register(F, {
+  __unm = "neg",
+  __shl = "mul_2exp",
+  __shr = "div_2exp",
+  __pow = "pow",
+})
 
-for name, fun in pairs(q_ops) do
-  Q[name] = mp_op(q, fun)
-end
-
-function Z.__lt(a, b)
-  local ta, tb = getmetatable(a), getmetatable(b)
-
-  if ta == nil or tb == Q then
-    return b:cmp(a) > 0 -- b > a
+local function tgless(a, b)
+  local T, x = promote(a, b)
+  if x == b then
+    return b:cmp(a) > 0
   end
-  return a:cmp(b) < 0 -- a < b
+  return a:cmp(b) < 0
 end
 
-function Q.__lt(a, b)
-  local ta, tb = getmetatable(a), getmetatable(b)
-
-  if ta == nil then
-    return b:cmp(a) > 0 -- b > a
-  end
-  return a:cmp(b) < 0 -- a < b
-end
+Z.__lt = tgless
+Q.__lt = tgless
+F.__lt = tgless
 
 return mp
