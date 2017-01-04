@@ -563,29 +563,6 @@ OP_UI(lcm)
 OP_UI(addmul)
 OP_UI(submul)
 
-static int z__partial_ref(lua_State *L, int i, mpz_ptr z)
-{
-	mpz_ptr *p = lua_newuserdata(L, sizeof (mpz_ptr));
-	if (luaL_getmetatable(L, "mp$_t") == LUA_TNIL)
-		luaL_error(L, "mp$_t not registered");
-	*p = z;
-	/* temporarily remove the __gc method from metatable */
-	lua_pushnil(L);
-	lua_setfield(L, -2, "__gc");
-	/* set metatable (without __gc method) */
-	lua_pushvalue(L, -1);
-	lua_setmetatable(L, -3);
-	/* restore __gc method */
-	lua_pushcfunction(L, z_gc);
-	lua_setfield(L, -2, "__gc");
-	/* pop metatable */
-	lua_pop(L, 1);
-
-	lua_pushvalue(L, i);
-	lua_setuservalue(L, -2); /* reference the object */
-	return 1;
-}
-
 static int z_sizeinbase(lua_State *L)
 {
 	mpz_ptr z;
@@ -1003,14 +980,39 @@ static int q_canonicalize(lua_State *L)
 	return 1;
 }
 
+static int q__partial_ref(lua_State *L, int i, mpz_ptr z)
+{
+	mpz_ptr *p = lua_newuserdata(L, sizeof (mpz_ptr));
+	if (luaL_getmetatable(L, "mp$_t") != LUA_TNIL) {
+		*p = z;
+		/* temporarily remove the __gc method from metatable */
+		lua_pushnil(L);
+		lua_setfield(L, -2, "__gc");
+		/* set metatable (without __gc method) */
+		lua_pushvalue(L, -1);
+		lua_setmetatable(L, -3);
+		/* restore __gc method */
+		lua_pushcfunction(L, z_gc);
+		lua_setfield(L, -2, "__gc");
+	}
+	/* doesn't matter if no such metatable;
+	 * we don't need a finalizer anyway */
+	/* pop metatable */
+	lua_pop(L, 1);
+
+	lua_pushvalue(L, i);
+	lua_setuservalue(L, -2); /* reference the object */
+	return 1;
+}
+
 static int q_numref(lua_State *L)
 {
-	return z__partial_ref(L, 1, mpq_numref(q__check(L, 1)));
+	return q__partial_ref(L, 1, mpq_numref(q__check(L, 1)));
 }
 
 static int q_denref(lua_State *L)
 {
-	return z__partial_ref(L, 1, mpq_denref(q__check(L, 1)));
+	return q__partial_ref(L, 1, mpq_denref(q__check(L, 1)));
 }
 
 static int $_equal(lua_State *L)
