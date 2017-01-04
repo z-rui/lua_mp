@@ -234,7 +234,7 @@ static int $_gc(lua_State *L)
 static int $_tostring(lua_State *L)	/** tostring(x) */
 {
 	mp$_ptr z;
-	int base;
+	int base, absbase;
 	luaL_Buffer B;
 	size_t sz;
 	char *s;
@@ -245,28 +245,53 @@ static int $_tostring(lua_State *L)	/** tostring(x) */
 
 	z = _checkmp$(L, 1, 1);
 	base = _check_outbase(L, 2);
+	absbase = abs(base);
 #if defined(MPZ)
-	sz = mpz_sizeinbase(z, abs(base)) + 2;
+	sz = mpz_sizeinbase(z, absbase) + 2;
 #elif defined(MPQ)
-	sz = mpz_sizeinbase(mpq_numref(z), abs(base))
-	   + mpz_sizeinbase(mpq_denref(z), abs(base))
+	sz = mpz_sizeinbase(mpq_numref(z), absbase)
+	   + mpz_sizeinbase(mpq_denref(z), absbase)
 	   + 3;
 #elif defined(MPF)
 	n_digits = (size_t) luaL_optinteger(L, 3, 0);
-	sz = n_digits + 4; /* "-0.\0" */
+	if (n_digits == 0) {
+		/* guess buffer size */
+		n_digits = absbase;
+		sz = 0;
+		while (n_digits >>= 1) ++sz;
+		sz = mpf_get_prec(z) / sz + 10;
+	} else {
+		sz = n_digits + 4;
+	}
 #endif
 	s = luaL_buffinitsize(L, &B, sz);
 #ifdef MPF
-	mpf_get_str(s+2, &exp, base, n_digits, z);
-	if (s[2] == '-') {
-		memcpy(s, "-0.", 3);
-	} else {
+	mpf_get_str(s+1, &exp, base, n_digits, z);
+	/* assert(strlen(s+1) < sz-1); */
+	sz = strlen(s+1);
+	if (sz == 0) {
 		memcpy(s, "0.", 2);
+		luaL_addsize(&B, 2);
+	} else {
+		size_t n;
+		int scientific = 0;
+
+		n = s[1] == '-';
+		if (0 <= exp && exp <= sz) {
+			n += exp;
+		} else {
+			n++;
+			scientific = 1;
+		}
+		memmove(s, s+1, n);
+		s[n] = '.';
+		luaL_addsize(&B, sz+1);
+		if (scientific) {
+			luaL_addchar(&B, (absbase > 10) ? '@' : 'e');
+			lua_pushfstring(L, "%I", (lua_Integer) exp - 1);
+			luaL_addvalue(&B);
+		}
 	}
-	luaL_addsize(&B, strlen(s));
-	luaL_addchar(&B, (base < -10 || base > 10) ? '@' : 'e');
-	lua_pushfstring(L, "%I", (lua_Integer) exp);
-	luaL_addvalue(&B);
 	luaL_pushresult(&B);
 #else
 	mp$_get_str(s, base, z);
