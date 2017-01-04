@@ -480,6 +480,9 @@ static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); 
 OP_UI(add)
 OP_UI(sub)
 OP_UI(mul)
+#ifdef MPF
+OP_UI(div)
+#endif
 #endif
 
 #ifdef MPZ /* integer specific functions */
@@ -1165,6 +1168,8 @@ static const luaL_Reg $_Reg[] =
 	METHOD(numref),
 	METHOD(denref),
 	METHOD(equal),
+#elif defined(MPF)
+	METHOD(div),
 #endif
 	METHOD(inp_str),
 	METHOD(out_str),
