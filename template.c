@@ -333,30 +333,10 @@ static int $_cmp(lua_State *L)
 	si = lua_tointegerx(L, 2, &isint);
 	if (isint && CAN_HOLD(long, si)) {
 #if defined(MPQ)
-		lua_Integer si2;
-
-		if (lua_isnone(L, 3)) {
-			si2 = 1;
-		} else {
-			si2 = luaL_checkinteger(L, 3);
-			if (!CAN_HOLD(long, si2))
-				goto overflow_long;
-		}
-		ret = mpq_cmp_si(a, si, si2);
+		ret = mpq_cmp_si(a, si, 1);
 	} else if (isint) { /* integer, but overflows long */
 		/* this can only happen when lua_Integer is longer
 		 * than long */
-		if (!lua_isnone(L, 3) && luaL_checkinteger(L, 3)) {
-			mpz_ptr num, den;
-overflow_long:
-			b = q_new(L);
-			num = mpq_numref((mpq_ptr) b);
-			den = mpq_denref((mpq_ptr) b);
-			z__set_str(L, num, 2, 0);
-			z__set_int(L, den, 3);
-			q_checksanity(L, 3, b);
-			goto q_cmp_q;
-		}
 		b = z_new(L);
 		z__set_str(L, b, 2, 0);
 		goto q_cmp_z;
@@ -374,9 +354,6 @@ q_cmp_z:
 #endif
 	} else { /* general case */
 		b = _tomp$(L, 2);
-#ifdef MPQ
-q_cmp_q:
-#endif
 		ret = mp$_cmp(a, b);
 	}
 	lua_pushinteger(L, ret);
