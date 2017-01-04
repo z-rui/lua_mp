@@ -19,7 +19,7 @@ local function promote(a, b)
   return mptypes[h1], a
 end
 
--- type-generic binary operators (+, -, *)
+-- type-generic binary operators (+, -, *, /)
 local function tg_binop(fname)
   return function(a, b)
     local T = promote(a, b)
@@ -27,15 +27,25 @@ local function tg_binop(fname)
   end
 end
 
-local tgadd = tg_binop "add"
-local tgsub = tg_binop "sub"
-local tgmul = tg_binop "mul"
-local tgdiv = tg_binop "div"
+local tg = {
+  __add = tg_binop "add",
+  __sub = tg_binop "sub",
+  __mul = tg_binop "mul",
+  __div = tg_binop "div",
+  __lt = function (a, b)
+    local T, x = promote(a, b)
+    if x == b then
+      return b:cmp(a) > 0
+    end
+    return a:cmp(b) < 0
+  end,
+}
 
-Z.__add = tgadd
-Z.__sub = tgsub
-Z.__mul = tgmul
+for k, v in pairs(tg) do
+  Z[k], Q[k], F[k] = v, v, v
+end
 
+-- rewrite Z.__div
 function Z.__div(a, b)
   if mphier(a) <= 1 and mphier(b) <= 1 then
     -- Z / Z is special case
@@ -44,17 +54,34 @@ function Z.__div(a, b)
   return tgdiv(a, b)
 end
 
-Q.__add = tgadd
-Q.__sub = tgsub
-Q.__mul = tgmul
-Q.__div = tgdiv
+-- type-specific methods
+local ts = {
+  [Z] = {
+    __unm  = "neg",
+    __idiv = "div",
+    __mod  = "mod",
+    __pow  = "pow",
+    __band = "band",
+    __bor  = "bor",
+    __bxor = "bxor",
+    __bnot = "bnot",
+    __shl  = "mul_2exp",
+    __shr  = "div_2exp",
+  },
+  [Q] = {
+    __unm = "neg",
+    __shl = "mul_2exp",
+    __shr = "div_2exp",
+  },
+  [F] = {
+    __unm = "neg",
+    __shl = "mul_2exp",
+    __shr = "div_2exp",
+    __pow = "pow",
+  },
+}
 
-F.__add = tgadd
-F.__sub = tgsub
-F.__mul = tgmul
-F.__div = tgdiv
-
-local function register(mt, list)
+for mt, list in pairs(ts) do
   local T = mt.__index
   for metamethod, fname in pairs(list) do
     local fun = T[fname]
@@ -63,43 +90,5 @@ local function register(mt, list)
     end
   end
 end
-
-register(Z, {
-  __unm  = "neg",
-  __idiv = "div",
-  __mod  = "mod",
-  __pow  = "pow",
-  __band = "band",
-  __bor  = "bor",
-  __bxor = "bxor",
-  __bnot = "bnot",
-  __shl  = "mul_2exp",
-  __shr  = "div_2exp",
-})
-
-register(Q, {
-  __unm = "neg",
-  __shl = "mul_2exp",
-  __shr = "div_2exp",
-})
-
-register(F, {
-  __unm = "neg",
-  __shl = "mul_2exp",
-  __shr = "div_2exp",
-  __pow = "pow",
-})
-
-local function tgless(a, b)
-  local T, x = promote(a, b)
-  if x == b then
-    return b:cmp(a) > 0
-  end
-  return a:cmp(b) < 0
-end
-
-Z.__lt = tgless
-Q.__lt = tgless
-F.__lt = tgless
 
 return mp
