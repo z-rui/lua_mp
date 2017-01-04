@@ -69,6 +69,22 @@ static FILE *_checkfile(lua_State *L, int i)
 	return fs->f;
 }
 
+static void *_checkmp(lua_State *L, int i, int raise, char t)
+{
+	void *z;
+	char T[] = "mp$_t";
+
+	T[2] = t;
+	z = (raise) ? luaL_checkudata(L, i, T)
+		    : luaL_testudata(L, i, T);
+	if (t == 'z' && z) {
+		if (lua_getuservalue(L, i) == LUA_TUSERDATA)
+			z = *(mpz_ptr *) z; /* partial ref */
+		lua_pop(L, 1); /* remove uservalue */
+	}
+	return z;
+}
+
 static int _open_common(lua_State *L)
 {
 	lua_pushvalue(L, -2);
@@ -99,10 +115,6 @@ static int _check_inbase(lua_State *L, int i)
 	luaL_argcheck(L, base == 0 || (2 <= base && base <= 62), 2, "base neither 0 nor in range [2,62]");
 	return (int) base;
 }
-
-static mpz_ptr _checkmpz(lua_State *L, int, int);
-static mpq_ptr _checkmpq(lua_State *L, int, int);
-static mpf_ptr _checkmpf(lua_State *L, int, int);
 
 #include "mpz.c"
 #include "mpq.c"
