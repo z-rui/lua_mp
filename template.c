@@ -49,7 +49,7 @@ static void $__set_str(lua_State *L, mp$_ptr z, int i, int base)
 	}
 }
 
-#if defined(MPZ) || defined(MPF)
+#ifndef MPQ
 static void $__set_int(lua_State *L, mp$_ptr z, int i)
 {
 	lua_Integer val;
@@ -67,17 +67,17 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 {
 	switch (lua_type(L, i)) {
 		case LUA_TNUMBER:
-#if defined(MPZ)
+#ifdef MPZ
 			luaL_checkinteger(L, i);
 			z__set_int(L, z, i);
-#elif defined(MPQ) || defined(MPF)
+#else
 			if (lua_isinteger(L, i)) {
-#ifdef MPQ
+# ifdef MPQ
 				z__set_int(L, mpq_numref(z), i);
 				mpz_set_si(mpq_denref(z), 1);
-#else /* MPF */
-				f__set_int(L, z, i);
-#endif
+# else /* MPF */
+				$__set_int(L, z, i);
+# endif
 			} else {
 				lua_Number val;
 
@@ -95,9 +95,9 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 			void *p;
 
 			if ((p = _checkmp(L, i, 0, 'z'))) {
-#if defined(MPZ)
+#ifdef MPZ
 				mpz_set(z, p);
-#elif defined(MPQ) || defined(MPF)
+#else
 				mp$_set_z(z, p);
 #endif
 			} else if ((p = _checkmp(L, i, 0, 'q'))) {
@@ -106,26 +106,23 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 
 				num = mpq_numref((mpq_ptr) p);
 				den = mpq_denref((mpq_ptr) p);
-				if (mpz_cmp_si(den, 1) == 0) {
-					mpz_set(z, num);
-				} else {
+				if (mpz_cmp_si(den, 1) != 0)
 					goto error;
-				}
+				mpz_set(z, num);
 #elif defined(MPQ)
 				mpq_set(z, p);
 #elif defined(MPF)
 				mpf_set_q(z, p);
 #endif
 			} else if ((p = _checkmp(L, i, 0, 'f'))) {
-#if defined(MPZ)
-				if (!mpf_integer_p(p)) {
-					goto error;
-				}
-#endif
-#if defined(MPZ) || defined(MPQ)
-				mp$_set_f(z, p);
-#elif defined(MPF)
+#ifdef MPF
 				mpf_set(z, p);
+#else
+# ifdef MPZ
+				if (!mpf_integer_p(p))
+					goto error;
+# endif
+				mp$_set_f(z, p);
 #endif
 			} else {
 				goto error;
