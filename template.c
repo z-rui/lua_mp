@@ -468,6 +468,21 @@ static int $_##fun(lua_State *L) { return $_uiop(L, mp$_##fun, mp$_##fun##_ui); 
 OP_UI(add)
 OP_UI(sub)
 OP_UI(mul)
+
+static int $_urandomb(lua_State *L)
+{
+	mp$_ptr r;
+	gmp_randstate_t *state;
+	mp_bitcnt_t n;
+
+	r = $__check(L, 1);
+	state = luaL_checkudata(L, 2, "gmp_randstate_t");
+	n = _castbitcnt(L, 3);
+	mp$_urandomb(r, *state, n);
+	lua_settop(L, 1);
+	return 1;
+}
+
 #endif
 
 #if defined(MPZ) /* integer specific functions */
@@ -878,20 +893,6 @@ static int z_sqrt(lua_State *L)
 	}
 }
 
-static int z_urandomb(lua_State *L)
-{
-	mpz_ptr r;
-	gmp_randstate_t *state;
-	mp_bitcnt_t n;
-
-	r = z__check(L, 1);
-	state = luaL_checkudata(L, 2, "gmp_randstate_t");
-	n = _castbitcnt(L, 3);
-	mpz_urandomb(r, *state, n);
-	lua_settop(L, 1);
-	return 1;
-}
-
 static int z_urandomm(lua_State *L)
 {
 	mpz_ptr r, n;
@@ -1244,14 +1245,15 @@ static const luaL_Reg $_Reg[] =
 	METHOD(denref),
 	METHOD(equal),
 #elif defined(MPF)
-	METHOD(div),
 	METHOD(set_prec),
 	METHOD(get_prec),
+	METHOD(div),
 	METHOD(pow),
 	METHOD(sqrt),
 	METHOD(ceil),
 	METHOD(floor),
 	METHOD(trunc),
+	METHOD(urandomb),
 #endif
 	METHOD(inp_str),
 	METHOD(out_str),
