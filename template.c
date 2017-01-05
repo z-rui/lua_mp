@@ -54,7 +54,7 @@ static void $__set_int(lua_State *L, mp$_ptr z, int i)
 {
 	lua_Integer val;
 
-	val = lua_tonumber(L, i);
+	val = lua_tointeger(L, i);
 	if (CAN_HOLD(long, val)) {
 		mp$_set_si(z, (long) val);
 	} else {
