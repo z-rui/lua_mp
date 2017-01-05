@@ -980,7 +980,7 @@ static int q_canonicalize(lua_State *L)
 static int q__partial_ref(lua_State *L, int i, mpz_ptr z)
 {
 	mpz_ptr *p = lua_newuserdata(L, sizeof (mpz_ptr));
-	if (luaL_getmetatable(L, "mp$_t") != LUA_TNIL) {
+	if (luaL_getmetatable(L, "mpz_t") != LUA_TNIL) {
 		*p = z;
 		/* temporarily remove the __gc method from metatable */
 		lua_pushnil(L);
