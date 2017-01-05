@@ -326,19 +326,16 @@ static int $_cmp(lua_State *L)
 #endif
 	si = lua_tointegerx(L, 2, &isint);
 	if (isint && CAN_HOLD(long, si)) {
-#if defined(MPQ)
+#ifdef MPQ
 		ret = mpq_cmp_si(a, si, 1);
-	} else if (isint) { /* integer, but overflows long */
-		/* this can only happen when lua_Integer is longer
-		 * than long */
-		b = z_new(L);
-		z__set_str(L, b, 2, 0);
-		goto q_cmp_z;
-	} else if ((b = _checkmp(L, 2, 0, 'z'))) {
-q_cmp_z:
-		ret = mpq_cmp_z(a, b);
-#elif defined(MPZ) || defined(MPF)
+#else
 		ret = mp$_cmp_si(a, si);
+#endif
+#ifndef MPZ
+	} else if ((b = _checkmp(L, 2, 0, 'z'))) {
+		ret = mp$_cmp_z(a, b);
+#endif
+#ifndef MPQ /* there is no mpq_cmp_d */
 	} else if (!isint && lua_type(L, 2) == LUA_TNUMBER) {
 		lua_Number val;
 
