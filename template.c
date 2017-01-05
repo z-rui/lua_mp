@@ -1050,18 +1050,24 @@ static int f_div(lua_State *L)
 {
 	mpf_ptr r, a, b;
 	lua_Integer val;
-	int isnum;
+	int isint;
 
 	r = $__check(L, 1);
-	a = _tomp$(L, 2);
-	val = lua_tointegerx(L, 3, &isnum);
-	if (isnum && val >= 0 && CAN_HOLD(unsigned long, val)) {
+	val = lua_tointegerx(L, 3, &isint);
+	if (isint && val >= 0 && CAN_HOLD(unsigned long, val)) {
 		if (val == 0) goto divzero;
+		a = _tomp$(L, 2);
 		mpf_div_ui(r, a, val);
 	} else {
 		b = _tompf(L, 3);
 		if (mpf_sgn(b) == 0) goto divzero;
-		mpf_div(r, a, b);
+		val = lua_tointegerx(L, 2, &isint);
+		if (isint && val >= 0 && CAN_HOLD(unsigned, val)) {
+			mpf_ui_div(r, val, b);
+		} else {
+			a = _tomp$(L, 2);
+			mpf_div(r, a, b);
+		}
 	}
 	lua_settop(L, 1);
 	return 1;
