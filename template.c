@@ -440,6 +440,9 @@ static int $_##fun(lua_State *L) { return $_##typ(L, mp$_##fun); }
 OP_DCL(unop, abs)
 OP_DCL(unop, neg)
 
+#define PRED_DCL(op) \
+static int $_##op(lua_State *L) { lua_pushboolean(L, mp$_##op(_tomp$(L, 1))); return 1; }
+
 #if defined(MPZ) || defined(MPF)
 static int $_uiop(lua_State *L, void (*fun)(mp$_ptr, mp$_srcptr, mp$_srcptr), void (*fun_ui)(mp$_ptr, mp$_srcptr, unsigned long))
 {
@@ -641,9 +644,6 @@ static int z_idiv(lua_State *L)
 }
 
 static int z_mod(lua_State *L) { lua_pushliteral(L, "fr"); return z_idiv(L); }
-
-#define PRED_DCL(op) \
-static int z_##op(lua_State *L) { lua_pushboolean(L, mpz_##op(_tompz(L, 1))); return 1; }
 
 PRED_DCL(odd_p)
 PRED_DCL(even_p)
@@ -1111,6 +1111,9 @@ static int f_pow(lua_State *L)
 OP_DCL(unop, ceil)
 OP_DCL(unop, floor)
 OP_DCL(unop, trunc)
+
+PRED_DCL(integer_p)
+
 #endif
 
 static int $_inp_str(lua_State *L)
@@ -1251,6 +1254,7 @@ static const luaL_Reg $_Reg[] =
 	METHOD(floor),
 	METHOD(trunc),
 	METHOD(urandomb),
+	METHOD(integer_p),
 #endif
 	METHOD(inp_str),
 	METHOD(out_str),
