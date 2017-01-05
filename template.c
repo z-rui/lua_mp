@@ -1109,6 +1109,10 @@ static int f_pow(lua_State *L)
 	lua_settop(L, 1);
 	return 1;
 }
+
+OP_DCL(unop, ceil)
+OP_DCL(unop, floor)
+OP_DCL(unop, trunc)
 #endif
 
 static int $_inp_str(lua_State *L)
@@ -1245,6 +1249,9 @@ static const luaL_Reg $_Reg[] =
 	METHOD(get_prec),
 	METHOD(pow),
 	METHOD(sqrt),
+	METHOD(ceil),
+	METHOD(floor),
+	METHOD(trunc),
 #endif
 	METHOD(inp_str),
 	METHOD(out_str),
