@@ -31,52 +31,20 @@ static mp$_ptr $_new(lua_State *L)
 	return z;
 }
 
-#if defined(MPZ)
-# define MPNAME "integer"
-#elif defined(MPQ)
-# define MPNAME "rational"
-#elif defined(MPF)
-# define MPNAME "float"
-#endif
-
-static void $__set_str(lua_State *L, mp$_ptr z, int i, int base)
-{
-	const char *s;
-
-	s = lua_tostring(L, i);
-	if (mp$_set_str(z, s, base) != 0) {
-		_conversion_error(L, i, MPNAME, base);
-	}
-}
-
-#ifndef MPQ
-static void $__set_int(lua_State *L, mp$_ptr z, int i)
-{
-	lua_Integer val;
-
-	val = lua_tointeger(L, i);
-	if (CAN_HOLD(long, val)) {
-		mp$_set_si(z, (long) val);
-	} else {
-		$__set_str(L, z, i, 0);
-	}
-}
-#endif
-
 static void $__set(lua_State *L, int i, mp$_ptr z)
 {
 	switch (lua_type(L, i)) {
 		case LUA_TNUMBER:
 #ifdef MPZ
 			luaL_checkinteger(L, i);
-			z__set_int(L, z, i);
+			mp__set_int(L, i, z, 'z');
 #else
 			if (lua_isinteger(L, i)) {
 # ifdef MPQ
-				z__set_int(L, mpq_numref(z), i);
+				mp__set_int(L, i, mpq_numref(z), 'z');
 				mpz_set_si(mpq_denref(z), 1);
 # else /* MPF */
-				$__set_int(L, z, i);
+				mp__set_int(L, i, z, '$');
 # endif
 			} else {
 				lua_Number val;
@@ -89,7 +57,7 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 #endif
 			break;
 		case LUA_TSTRING:
-			$__set_str(L, z, i, 0);
+			mp__set_str(L, i, 0, z, '$');
 			break;
 		case LUA_TUSERDATA: {
 			void *p;
@@ -136,7 +104,7 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 		}
 		default:
 error:
-			_conversion_error(L, i, MPNAME, 0);
+			_conversion_error(L, i, '$', 0);
 	}
 }
 
@@ -179,7 +147,7 @@ static int $_set(lua_State *L)
 		/* 2 arguments: z:set(str, base) */
 		luaL_checkstring(L, 2);
 		base = _check_inbase(L, 3);
-		$__set_str(L, z, 2, base);
+		mp__set_str(L, 2, base, z, '$');
 	} else {
 		/* 1 argument z:set(value) */
 		$__set(L, 2, z);
@@ -844,11 +812,11 @@ static int q_div(lua_State *L)
 		if (zb)
 			mpz_set(mpq_numref(a), zb);
 		else
-			z__set_int(L, mpq_numref(a), 2);
+			mp__set_int(L, 2, mpq_numref(a), 'z');
 		if (zc)
 			mpz_set(mpq_denref(a), zc);
 		else
-			z__set_int(L, mpq_denref(a), 3);
+			mp__set_int(L, 2, mpq_denref(a), 'z');
 		/* canonicalize the result */
 		_check_divisor(L, mpq_denref(a));
 		mpq_canonicalize(a);

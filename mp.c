@@ -23,9 +23,16 @@
 
 #define CAN_HOLD(type, val) ((type) (val) == (val))
 
-static void _conversion_error(lua_State *L, int i, const char *typ, int base)
+static void _conversion_error(lua_State *L, int i, char t, int base)
 {
-	lua_pushfstring(L, "cannot convert to %s", typ);
+	const char *T = 0;
+
+	switch (t) {
+		case 'z': T = "integer"; break;
+		case 'q': T = "rational"; break;
+		case 'f': T = "float"; break;
+	}
+	lua_pushfstring(L, "cannot convert to %s", T);
 	if (base) {
 		lua_pushfstring(L, " in base %d", base);
 		lua_concat(L, 2);
@@ -221,6 +228,7 @@ static void q_checksanity(lua_State *L, int i, mpq_ptr z)
 	/* sanity check to prevent fp exception */
 	luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
 }
+
 static int _tonumber(lua_State *L)
 {
 	void *z;
@@ -248,6 +256,36 @@ static int _tonumber(lua_State *L)
 	}
 	lua_pushnumber(L, val);
 	return 1;
+}
+
+static void mp__set_str(lua_State *L, int i, int base, void *z, char t)
+{
+	const char *s;
+	int rc = -1;
+
+	s = lua_tostring(L, i);
+	switch (t) {
+		case 'z': rc = mpz_set_str(z, s, base); break;
+		case 'q': rc = mpq_set_str(z, s, base); break;
+		case 'f': rc = mpf_set_str(z, s, base); break;
+	}
+	if (rc != 0)
+		_conversion_error(L, i, t, base);
+}
+
+static void mp__set_int(lua_State *L, int i, void *z, char t)
+{
+	lua_Integer val;
+
+	val = lua_tointeger(L, i);
+	if (CAN_HOLD(long, val)) {
+		switch (t) {
+			case 'z': mpz_set_si(z, (long) val); break;
+			case 'f': mpf_set_si(z, (long) val); break;
+		}
+	} else {
+		mp__set_str(L, i, 0, z, t);
+	}
 }
 
 #include "mpz.c"
