@@ -69,22 +69,6 @@ static FILE *_checkfile(lua_State *L, int i)
 	return fs->f;
 }
 
-static void *_checkmp(lua_State *L, int i, int raise, char t)
-{
-	void *z;
-	char T[] = "mp$_t";
-
-	T[2] = t;
-	z = (raise) ? luaL_checkudata(L, i, T)
-		    : luaL_testudata(L, i, T);
-	if (t == 'z' && z) {
-		if (lua_getuservalue(L, i) == LUA_TUSERDATA)
-			z = *(mpz_ptr *) z; /* partial ref */
-		lua_pop(L, 1); /* remove uservalue */
-	}
-	return z;
-}
-
 static int _testmp(lua_State *L, int i, const char *s, void **pz)
 {
 	char t;
@@ -95,7 +79,7 @@ static int _testmp(lua_State *L, int i, const char *s, void **pz)
 
 		T[2] = t;
 		if (t == '*')
-			break;
+			return 0;
 		z = luaL_testudata(L, i, T);
 		if (z) {
 			if (t == 'z') {

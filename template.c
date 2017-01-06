@@ -142,14 +142,18 @@ error:
 
 static mp$_ptr $__check(lua_State *L, int i)
 {
-	return _checkmp(L, i, 1, '$');
+	void *z;
+
+	_testmp(L, i, "$", &z);
+	return z;
 }
 
 static mp$_ptr _tomp$(lua_State *L, int i)
 {
-	mp$_ptr z;
+	void *z = 0;
 
-	if ((z = _checkmp(L, i, 0, '$')) == 0) {
+	_testmp(L, i, "$*", &z);
+	if (!z) {
 		luaL_checkany(L, i);
 #ifdef MPF
 		z = f_new(L, f__get_default_prec(L));
@@ -222,7 +226,7 @@ static int $_cmp(lua_State *L)
 		ret = mp$_cmp_si(a, si);
 #endif
 #ifndef MPZ
-	} else if ((b = _checkmp(L, 2, 0, 'z'))) {
+	} else if (_testmp(L, 2, "z*", &b)) {
 		ret = mp$_cmp_z(a, b);
 #endif
 #ifndef MPQ /* there is no mpq_cmp_d */
@@ -507,13 +511,14 @@ static int z_cmpabs(lua_State *L)
 static int z_idiv(lua_State *L)
 {
 	int mode;
-	mpz_ptr q, r, a, b;
+	mpz_ptr q, a, b;
+	void *r;
 
 	q = z__check(L, 1);
 	a = _tompz(L, 2);
 	b = _tompz(L, 3);
 	_check_divisor(L, b);
-	if ((r = _checkmp(L, 4, 0, 'z'))) {
+	if (_testmp(L, 4, "z*", &r)) {
 		/* return both quotient and remainder */
 		static void (*ops[])(mpz_ptr, mpz_ptr, mpz_srcptr, mpz_srcptr) = {
 			mpz_cdiv_qr, mpz_fdiv_qr, mpz_tdiv_qr
@@ -829,12 +834,12 @@ static int q_inv(lua_State *L)
 static int q_div(lua_State *L)
 {
 	mpq_ptr a, b, c;
-	mpz_ptr zb, zc;
+	void *zb, *zc;
 
 	a = q__check(L, 1);
 	zb = zc = 0;
-	if (	(lua_isinteger(L, 2) || (zb = _checkmp(L, 2, 0, 'z'))) &&
-		(lua_isinteger(L, 3) || (zc = _checkmp(L, 3, 0, 'z')))) {
+	if (	(lua_isinteger(L, 2) || _testmp(L, 2, "z*", &zb)) &&
+		(lua_isinteger(L, 3) || _testmp(L, 3, "z*", &zc))) {
 		/* b and c are integers, just set {num,den} */
 		if (zb)
 			mpz_set(mpq_numref(a), zb);
