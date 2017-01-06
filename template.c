@@ -1,113 +1,3 @@
-#ifdef MPF
-static void f__get_default_prec(lua_State *L)
-{
-	luaL_getmetatable(L, "mp$_t");
-	lua_getfield(L, -1, "__index"); /* lib table */
-	lua_getfield(L, -1, "precision");
-	lua_insert(L, -3);
-	lua_pop(L, 2); /* metatable and lib table */
-}
-#endif
-
-static mp$_ptr $_new(lua_State *L)
-{
-	mp$_ptr z;
-#ifdef MPF
-	mp_bitcnt_t prec;
-
-	prec = _castbitcnt(L, -1);
-	lua_pop(L, 1); /* precision */
-#endif
-	z = lua_newuserdata(L, sizeof (mp$_t));
-
-	if (luaL_getmetatable(L, "mp$_t") == LUA_TNIL)
-		luaL_error(L, "mp$_t not registered");
-#ifdef MPF
-	mpf_init2(z, prec);
-#else
-	mp$_init(z);
-#endif
-	lua_setmetatable(L, -2);
-	return z;
-}
-
-static void $__set(lua_State *L, int i, mp$_ptr z)
-{
-	switch (lua_type(L, i)) {
-		case LUA_TNUMBER:
-#ifdef MPZ
-			luaL_checkinteger(L, i);
-			mp__set_int(L, i, z, 'z');
-#else
-			if (lua_isinteger(L, i)) {
-# ifdef MPQ
-				mp__set_int(L, i, mpq_numref(z), 'z');
-				mpz_set_si(mpq_denref(z), 1);
-# else /* MPF */
-				mp__set_int(L, i, z, '$');
-# endif
-			} else {
-				lua_Number val;
-
-				val = lua_tonumber(L, i);
-				luaL_argcheck(L, val == val && val * 0.0 == 0.0, i,
-						"infinity or NaN");
-				mp$_set_d(z, val);
-			}
-#endif
-			break;
-		case LUA_TSTRING:
-			mp__set_str(L, i, 0, z, '$');
-			break;
-		case LUA_TUSERDATA: {
-			void *p;
-
-			switch (_testmp(L, i, "zqf*", &p)) {
-				case 'z':
-#ifdef MPZ
-					mpz_set(z, p);
-#else
-					mp$_set_z(z, p);
-#endif
-					break;
-				case 'q': {
-#if defined(MPZ)
-					mpz_ptr num, den;
-
-					num = mpq_numref((mpq_ptr) p);
-					den = mpq_denref((mpq_ptr) p);
-					if (mpz_cmp_si(den, 1) != 0)
-						goto error;
-					mpz_set(z, num);
-#elif defined(MPQ)
-					mpq_set(z, p);
-#elif defined(MPF)
-					mpf_set_q(z, p);
-#endif
-					break;
-				}
-				case 'f':
-#ifdef MPF
-					mpf_set(z, p);
-#else
-# ifdef MPZ
-					if (!mpf_integer_p(p))
-						goto error;
-# endif
-					mp$_set_f(z, p);
-#endif
-					break;
-				default:
-					goto error;
-			}
-			break;
-		}
-		default:
-error:
-			_conversion_error(L, i, '$', 0);
-	}
-}
-
 static mp$_ptr $__check(lua_State *L, int i)
 {
 	void *z;
@@ -126,8 +16,8 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 #ifdef MPF
 		f__get_default_prec(L);
 #endif
-		z = $_new(L);
-		$__set(L, i, z);
+		z = mp_new(L, '$');
+		mp__set(L, i, z, '$');
 		lua_replace(L, i);
 	}
 #ifdef MPQ
@@ -149,7 +39,7 @@ static int $_set(lua_State *L)
 		mp__set_str(L, 2, base, z, '$');
 	} else {
 		/* 1 argument z:set(value) */
-		$__set(L, 2, z);
+		mp__set(L, 2, z, '$');
 	}
 	lua_settop(L, 1);
 	return 1;
@@ -163,7 +53,7 @@ static int $_call(lua_State *L)
 	else
 		lua_settop(L, 4);
 #endif
-	$_new(L);
+	mp_new(L, '$');
 	lua_replace(L, 1); /* replace the 'self' argument (the table) */
 	if (lua_gettop(L) > 1)
 		return $_set(L);

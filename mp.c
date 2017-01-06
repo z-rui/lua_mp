@@ -258,6 +258,47 @@ static int _tonumber(lua_State *L)
 	return 1;
 }
 
+static void f__get_default_prec(lua_State *L)
+{
+	luaL_getmetatable(L, "mpf_t");
+	lua_getfield(L, -1, "__index"); /* lib table */
+	lua_getfield(L, -1, "precision");
+	lua_insert(L, -3);
+	lua_pop(L, 2); /* metatable and lib table */
+}
+
+static void *mp_new(lua_State *L, char t)
+{
+	char T[] = "mp$_t";
+	void *z = 0;
+	mp_bitcnt_t prec;
+
+	if (t == 'f') {
+		prec = _castbitcnt(L, -1);
+		lua_pop(L, 1); /* precision */
+	}
+	T[2] = t;
+	if (luaL_getmetatable(L, T) == LUA_TNIL)
+		luaL_error(L, "missing metatable");
+	switch (t) {
+		case 'z':
+			z = lua_newuserdata(L, sizeof (mpz_t));
+			mpz_init(z);
+			break;
+		case 'q':
+			z = lua_newuserdata(L, sizeof (mpq_t));
+			mpq_init(z);
+			break;
+		case 'f':
+			z = lua_newuserdata(L, sizeof (mpf_t));
+			mpf_init2(z, prec);
+			break;
+	}
+	lua_insert(L, -2);
+	lua_setmetatable(L, -2);
+	return z;
+}
+
 static void mp__set_str(lua_State *L, int i, int base, void *z, char t)
 {
 	const char *s;
@@ -281,10 +322,86 @@ static void mp__set_int(lua_State *L, int i, void *z, char t)
 	if (CAN_HOLD(long, val)) {
 		switch (t) {
 			case 'z': mpz_set_si(z, (long) val); break;
+			case 'q': mpq_set_si(z, (long) val, 1); break;
 			case 'f': mpf_set_si(z, (long) val); break;
 		}
 	} else {
 		mp__set_str(L, i, 0, z, t);
+	}
+}
+
+static void mp__set(lua_State *L, int i, void *z, char t)
+{
+	switch (lua_type(L, i)) {
+		case LUA_TNUMBER:
+			if (lua_isinteger(L, i)) {
+				mp__set_int(L, i, z, t);
+			} else if (t != 'z') {
+				lua_Number val;
+
+				val = lua_tonumber(L, i);
+				luaL_argcheck(L, val == val && val * 0.0 == 0.0, i,
+						"infinity or NaN");
+				switch (t) {
+					case 'q': mpq_set_d(z, val); break;
+					case 'f': mpf_set_d(z, val); break;
+				}
+			} else {
+				goto error;
+			}
+			break;
+		case LUA_TSTRING:
+			mp__set_str(L, i, 0, z, t);
+			break;
+		case LUA_TUSERDATA: {
+			void *p;
+
+			switch (_testmp(L, i, "zqf*", &p)) {
+				case 'z':
+					switch (t) {
+						case 'z': mpz_set(z, p); break;
+						case 'q': mpq_set_z(z, p); break;
+						case 'f': mpf_set_z(z, p); break;
+					}
+					break;
+				case 'q':
+					switch (t) {
+						case 'z':
+							if (mpz_cmp_si(mpq_denref((mpq_ptr) p), 1) != 0)
+								goto error;
+							mpz_set(z, mpq_numref((mpq_ptr) p));
+							break;
+						case 'q':
+							mpq_set(z, p);
+							break;
+						case 'f':
+							mpf_set_q(z, p);
+							break;
+					}
+					break;
+				case 'f':
+					switch (t) {
+						case 'z':
+							if (!mpf_integer_p(p))
+								goto error;
+							mpz_set_f(z, p);
+							break;
+						case 'q':
+							mpq_set_f(z, p);
+							break;
+						case 'f':
+							mpf_set(z, p);
+							break;
+					}
+					break;
+				default:
+					goto error;
+			}
+			break;
+		}
+		default:
+error:
+			_conversion_error(L, i, '$', 0);
 	}
 }
 
