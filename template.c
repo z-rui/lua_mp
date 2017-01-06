@@ -93,11 +93,8 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 			break;
 		case LUA_TUSERDATA: {
 			void *p;
-			char t;
 
-			p = _testmp(L, i, &t);
-			if (!p) goto error;
-			switch (t) {
+			switch (_testmp(L, i, "zqf*", &p)) {
 				case 'z':
 #ifdef MPZ
 					mpz_set(z, p);
@@ -132,6 +129,8 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 					mp$_set_f(z, p);
 #endif
 					break;
+				default:
+					goto error;
 			}
 			break;
 		}
