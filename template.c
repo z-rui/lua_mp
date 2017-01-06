@@ -93,39 +93,45 @@ static void $__set(lua_State *L, int i, mp$_ptr z)
 			break;
 		case LUA_TUSERDATA: {
 			void *p;
+			char t;
 
-			if ((p = _checkmp(L, i, 0, 'z'))) {
+			p = _testmp(L, i, &t);
+			if (!p) goto error;
+			switch (t) {
+				case 'z':
 #ifdef MPZ
-				mpz_set(z, p);
+					mpz_set(z, p);
 #else
-				mp$_set_z(z, p);
+					mp$_set_z(z, p);
 #endif
-			} else if ((p = _checkmp(L, i, 0, 'q'))) {
+					break;
+				case 'q': {
 #if defined(MPZ)
-				mpz_ptr num, den;
+					mpz_ptr num, den;
 
-				num = mpq_numref((mpq_ptr) p);
-				den = mpq_denref((mpq_ptr) p);
-				if (mpz_cmp_si(den, 1) != 0)
-					goto error;
-				mpz_set(z, num);
+					num = mpq_numref((mpq_ptr) p);
+					den = mpq_denref((mpq_ptr) p);
+					if (mpz_cmp_si(den, 1) != 0)
+						goto error;
+					mpz_set(z, num);
 #elif defined(MPQ)
-				mpq_set(z, p);
+					mpq_set(z, p);
 #elif defined(MPF)
-				mpf_set_q(z, p);
+					mpf_set_q(z, p);
 #endif
-			} else if ((p = _checkmp(L, i, 0, 'f'))) {
+					break;
+				}
+				case 'f':
 #ifdef MPF
-				mpf_set(z, p);
+					mpf_set(z, p);
 #else
 # ifdef MPZ
-				if (!mpf_integer_p(p))
-					goto error;
+					if (!mpf_integer_p(p))
+						goto error;
 # endif
-				mp$_set_f(z, p);
+					mp$_set_f(z, p);
 #endif
-			} else {
-				goto error;
+					break;
 			}
 			break;
 		}
@@ -134,14 +140,6 @@ error:
 			_conversion_error(L, i, MPNAME, 0);
 	}
 }
-
-#ifdef MPQ
-static void q_checksanity(lua_State *L, int i, mpq_ptr z)
-{
-	/* sanity check to prevent fp exception */
-	luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
-}
-#endif
 
 static mp$_ptr $__check(lua_State *L, int i)
 {
@@ -203,110 +201,6 @@ static int $_call(lua_State *L)
 	lua_replace(L, 1); /* replace the 'self' argument (the table) */
 	if (lua_gettop(L) > 1)
 		return $_set(L);
-	return 1;
-}
-
-static int $_gc(lua_State *L)
-{
-	mp$_ptr z = luaL_checkudata(L, 1, "mp$_t");
-
-	mp$_clear(z);
-	lua_pushnil(L);
-	lua_setmetatable(L, 1);
-	return 0;
-}
-
-static int $_tostring(lua_State *L)	/** tostring(x) */
-{
-	mp$_ptr z;
-	int base, absbase;
-	luaL_Buffer B;
-	size_t sz;
-	char *s;
-#ifdef MPF
-	size_t n_digits;
-	mp_exp_t exp;
-#endif
-
-	z = $__check(L, 1);
-	base = _check_outbase(L, 2);
-	absbase = abs(base);
-#if defined(MPZ)
-	sz = mpz_sizeinbase(z, absbase) + 2;
-#elif defined(MPQ)
-	sz = mpz_sizeinbase(mpq_numref(z), absbase)
-	   + mpz_sizeinbase(mpq_denref(z), absbase)
-	   + 3;
-#elif defined(MPF)
-	n_digits = (size_t) luaL_optinteger(L, 3, 0);
-	if (n_digits == 0) {
-		/* guess buffer size */
-		n_digits = absbase;
-		sz = 0;
-		while (n_digits >>= 1) ++sz;
-		sz = mpf_get_prec(z) / sz + 10;
-	} else {
-		sz = n_digits + 4;
-	}
-#endif
-	s = luaL_buffinitsize(L, &B, sz);
-#ifdef MPF
-	mpf_get_str(s+1, &exp, base, n_digits, z);
-	/* assert(strlen(s+1) < sz-1); */
-	sz = strlen(s+1);
-	if (sz == 0) {
-		memcpy(s, "0.", 2);
-		luaL_addsize(&B, 2);
-	} else {
-		size_t n;
-		int scientific = 0;
-
-		n = s[1] == '-';
-		if (0 <= exp && exp <= sz) {
-			n += exp;
-		} else {
-			n++;
-			scientific = 1;
-		}
-		memmove(s, s+1, n);
-		s[n] = '.';
-		luaL_addsize(&B, sz+1);
-		if (scientific) {
-			luaL_addchar(&B, (absbase > 10) ? '@' : 'e');
-			lua_pushfstring(L, "%I", (lua_Integer) exp - 1);
-			luaL_addvalue(&B);
-		}
-	}
-	luaL_pushresult(&B);
-#else
-	mp$_get_str(s, base, z);
-	luaL_pushresultsize(&B, strlen(s));
-#endif
-
-	return 1;
-}
-
-static int $_tonumber(lua_State *L)
-{
-	mp$_ptr z;
-	double val;
-
-	z = $__check(L, 1);
-#ifdef MPZ
-	/* FIXME 'signed long' maybe shorter than 'lua_Integer' */
-	if (mpz_fits_slong_p(z)) {
-		long val;
-
-		val = mpz_get_si(z);
-		lua_pushinteger(L, val);
-		return 1;
-	}
-#endif
-#ifdef MPQ
-	q_checksanity(L, 1, z);
-#endif
-	val = mp$_get_d(z);
-	lua_pushnumber(L, val);
 	return 1;
 }
 
@@ -987,7 +881,7 @@ static int q__partial_ref(lua_State *L, int i, mpz_ptr z)
 		lua_pushvalue(L, -1);
 		lua_setmetatable(L, -3);
 		/* restore __gc method */
-		lua_pushcfunction(L, z_gc);
+		lua_pushcfunction(L, _gc);
 		lua_setfield(L, -2, "__gc");
 	}
 	/* doesn't matter if no such metatable;
@@ -1165,15 +1059,15 @@ static int $_out_str(lua_State *L)
 
 static const luaL_Reg $_Meta[] = {
 	/* Note: keep __gc the first */
-	METAMETHOD(gc),
-	METAMETHOD(tostring),
+	{ "__gc",	_gc	},
+	{ "__tostring", _tostring	},
 	{ NULL,		NULL	}
 };
 
 static const luaL_Reg $_Reg[] =
 {
-	METHOD(tostring),
-	METHOD(tonumber),
+	{ "tostring",	_tostring	},
+	{ "tonumber",	_tonumber	},
 
 	METHOD(set),
 	METHOD(swap),

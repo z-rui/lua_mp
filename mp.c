@@ -85,6 +85,37 @@ static void *_checkmp(lua_State *L, int i, int raise, char t)
 	return z;
 }
 
+static void *_testmp(lua_State *L, int i, char *pt)
+{
+	const char *T;
+	void *z = 0;
+
+	if (luaL_getmetafield(L, i, "__name")) {
+		T = lua_tostring(L, -1);
+		if (T[0] == 'm' && T[1] == 'p' && (T[2] == 'z' || T[2] == 'q' || T[2] == 'f') && T[3] == '_' && T[4] == 't' && T[5] == '\0') {
+			*pt = T[2];
+			z = _checkmp(L, i, 1, *pt); /* just to be sure */
+		}
+	}
+	return z;
+}
+
+static int _gc(lua_State *L)
+{
+	char t;
+	void *z = _testmp(L, 1, &t);
+
+	switch (t) {
+		case 'z': mpz_clear(z); break;
+		case 'q': mpq_clear(z); break;
+		case 'f': mpf_clear(z); break;
+		default: return 0;
+	}
+	lua_pushnil(L);
+	lua_setmetatable(L, 1);
+	return 0;
+}
+
 static int _open_common(lua_State *L)
 {
 	lua_pushvalue(L, -2);
@@ -114,6 +145,115 @@ static int _check_inbase(lua_State *L, int i)
 	base = luaL_optinteger(L, i, 0);
 	luaL_argcheck(L, base == 0 || (2 <= base && base <= 62), 2, "base neither 0 nor in range [2,62]");
 	return (int) base;
+}
+
+static int _tostring(lua_State *L)	/** tostring(x) */
+{
+	void *z;
+	char t;
+	int base, absbase;
+	luaL_Buffer B;
+	size_t sz;
+	char *s;
+
+	z = _testmp(L, 1, &t);
+	luaL_argcheck(L, z, 1, "type error");
+	base = _check_outbase(L, 2);
+	absbase = abs(base);
+	if (t == 'f') {
+		size_t n_digits;
+		mp_exp_t exp;
+
+		n_digits = (size_t) luaL_optinteger(L, 3, 0);
+		if (n_digits == 0) {
+			/* guess buffer size */
+			n_digits = absbase;
+			sz = 0;
+			while (n_digits >>= 1) ++sz;
+			sz = mpf_get_prec(z) / sz + 10;
+		} else {
+			sz = n_digits + 4;
+		}
+		s = luaL_buffinitsize(L, &B, sz);
+		mpf_get_str(s+1, &exp, base, n_digits, z);
+		/* assert(strlen(s+1) < sz-1); */
+		sz = strlen(s+1);
+		if (sz == 0) {
+			memcpy(s, "0.", 2);
+			luaL_addsize(&B, 2);
+		} else {
+			size_t n;
+			int scientific = 0;
+
+			n = s[1] == '-';
+			if (0 <= exp && exp <= sz) {
+				n += exp;
+			} else {
+				n++;
+				scientific = 1;
+			}
+			memmove(s, s+1, n);
+			s[n] = '.';
+			luaL_addsize(&B, sz+1);
+			if (scientific) {
+				luaL_addchar(&B, (absbase > 10) ? '@' : 'e');
+				lua_pushfstring(L, "%I", (lua_Integer) exp - 1);
+				luaL_addvalue(&B);
+			}
+		}
+		luaL_pushresult(&B);
+	} else if (t == 'z') {
+		sz = mpz_sizeinbase(z, absbase) + 2;
+		s = luaL_buffinitsize(L, &B, sz);
+		mpz_get_str(s, base, z);
+		luaL_pushresultsize(&B, strlen(s));
+	} else if (t == 'q') {
+		sz = mpz_sizeinbase(mpq_numref((mpq_ptr) z), absbase)
+		   + mpz_sizeinbase(mpq_denref((mpq_ptr) z), absbase)
+		   + 3;
+		s = luaL_buffinitsize(L, &B, sz);
+		mpq_get_str(s, base, z);
+		luaL_pushresultsize(&B, strlen(s));
+	}
+
+	return 1;
+}
+
+static void q_checksanity(lua_State *L, int i, mpq_ptr z)
+{
+	/* sanity check to prevent fp exception */
+	luaL_argcheck(L, mpz_sgn(mpq_denref(z)) > 0, i, "non-canonicalized rational");
+}
+static int _tonumber(lua_State *L)
+{
+	void *z;
+	char t;
+	double val = 0;
+
+	z = _testmp(L, 1, &t);
+	luaL_argcheck(L, z, 1, "type error");
+	switch (t) {
+		case 'z':
+			/* FIXME 'signed long' maybe shorter than 'lua_Integer' */
+			if (mpz_fits_slong_p(z)) {
+				long val;
+
+				val = mpz_get_si(z);
+				lua_pushinteger(L, val);
+				return 1;
+			}
+			val = mpz_get_d(z);
+			break;
+		case 'q':
+			q_checksanity(L, 1, z);
+			val = mpq_get_d(z);
+			break;
+		case 'f':
+			val = mpf_get_d(z);
+			break;
+	}
+	lua_pushnumber(L, val);
+	return 1;
 }
 
 #include "mpz.c"
