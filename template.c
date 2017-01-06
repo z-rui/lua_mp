@@ -1,25 +1,25 @@
 #ifdef MPF
-static mp_bitcnt_t f__get_default_prec(lua_State *L)
+static void f__get_default_prec(lua_State *L)
 {
-	lua_Integer val;
-	int isint;
-
 	luaL_getmetatable(L, "mp$_t");
 	lua_getfield(L, -1, "__index"); /* lib table */
 	lua_getfield(L, -1, "precision");
-	val = lua_tointegerx(L, -1, &isint);
-	if (!isint || !CAN_HOLD(mp_bitcnt_t, val))
-		luaL_error(L, "precision cannot be represented as mp_bitcnt_t");
-	lua_pop(L, 3); /* metatable, lib table and precision */
-	return (mp_bitcnt_t) val;
+	lua_insert(L, -3);
+	lua_pop(L, 2); /* metatable and lib table */
 }
-
-static mpf_ptr f_new(lua_State *L, mp_bitcnt_t prec)
-#else
-static mp$_ptr $_new(lua_State *L)
 #endif
+
+static mp$_ptr $_new(lua_State *L)
 {
-	mp$_ptr z = lua_newuserdata(L, sizeof (mp$_t));
+	mp$_ptr z;
+#ifdef MPF
+	mp_bitcnt_t prec;
+
+	prec = _castbitcnt(L, -1);
+	lua_pop(L, 1); /* precision */
+#endif
+	z = lua_newuserdata(L, sizeof (mp$_t));
+
 	if (luaL_getmetatable(L, "mp$_t") == LUA_TNIL)
 		luaL_error(L, "mp$_t not registered");
 #ifdef MPF
@@ -124,10 +124,9 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 	if (!z) {
 		luaL_checkany(L, i);
 #ifdef MPF
-		z = f_new(L, f__get_default_prec(L));
-#else
-		z = $_new(L);
+		f__get_default_prec(L);
 #endif
+		z = $_new(L);
 		$__set(L, i, z);
 		lua_replace(L, i);
 	}
@@ -159,16 +158,12 @@ static int $_set(lua_State *L)
 static int $_call(lua_State *L)
 {
 #ifdef MPF
-	mp_bitcnt_t prec;
-
 	if (lua_isnoneornil(L, 4))
-		prec = f__get_default_prec(L);
+		f__get_default_prec(L);
 	else
-		prec = _castbitcnt(L, 4);
-	f_new(L, prec);
-#else
-	$_new(L);
+		lua_settop(L, 4);
 #endif
+	$_new(L);
 	lua_replace(L, 1); /* replace the 'self' argument (the table) */
 	if (lua_gettop(L) > 1)
 		return $_set(L);
