@@ -405,6 +405,26 @@ error:
 	}
 }
 
+static void *_tomp(lua_State *L, int i, char t)
+{
+	char s[] = "$*";
+	void *z = 0;
+
+	s[0] = t;
+	_testmp(L, i, s, &z);
+	if (!z) {
+		luaL_checkany(L, i);
+		if (t == 'f')
+			f__get_default_prec(L);
+		z = mp_new(L, t);
+		mp__set(L, i, z, t);
+		lua_replace(L, i);
+	}
+	if (t == 'q')
+		q_checksanity(L, i, z);
+	return z;
+}
+
 #include "mpz.c"
 #include "mpq.c"
 #include "mpf.c"

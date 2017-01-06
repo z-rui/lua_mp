@@ -8,22 +8,7 @@ static mp$_ptr $__check(lua_State *L, int i)
 
 static mp$_ptr _tomp$(lua_State *L, int i)
 {
-	void *z = 0;
-
-	_testmp(L, i, "$*", &z);
-	if (!z) {
-		luaL_checkany(L, i);
-#ifdef MPF
-		f__get_default_prec(L);
-#endif
-		z = mp_new(L, '$');
-		mp__set(L, i, z, '$');
-		lua_replace(L, i);
-	}
-#ifdef MPQ
-	q_checksanity(L, i, z);
-#endif
-	return z;
+	return _tomp(L, i, '$');
 }
 
 static int $_set(lua_State *L)
