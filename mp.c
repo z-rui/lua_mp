@@ -401,7 +401,7 @@ static void mp__set(lua_State *L, int i, void *z, char t)
 		}
 		default:
 error:
-			_conversion_error(L, i, '$', 0);
+			_conversion_error(L, i, t, 0);
 	}
 }
 
