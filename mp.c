@@ -25,17 +25,10 @@
 
 static void _conversion_error(lua_State *L, int i, char t, int base)
 {
-	const char *T = 0;
-
-	switch (t) {
-		case 'z': T = "integer"; break;
-		case 'q': T = "rational"; break;
-		case 'f': T = "float"; break;
-	}
-	lua_pushfstring(L, "cannot convert to %s", T);
 	if (base) {
-		lua_pushfstring(L, " in base %d", base);
-		lua_concat(L, 2);
+		lua_pushfstring(L, "invalid string in base %d", base);
+	} else {
+		lua_pushfstring(L, "number expected, got %s", lua_typename(L, lua_type(L, i)));
 	}
 	luaL_argerror(L, i, lua_tostring(L, -1));
 }
@@ -353,7 +346,8 @@ static void mp__set(lua_State *L, int i, void *z, char t)
 					case 'f': mpf_set_d(z, val); break;
 				}
 			} else {
-				goto error;
+integer_check_fail:
+				luaL_argerror(L, i, "number has no integer representation");
 			}
 			break;
 		case LUA_TSTRING:
@@ -374,7 +368,7 @@ static void mp__set(lua_State *L, int i, void *z, char t)
 					switch (t) {
 						case 'z':
 							if (mpz_cmp_si(mpq_denref((mpq_ptr) p), 1) != 0)
-								goto error;
+								goto integer_check_fail;
 							mpz_set(z, mpq_numref((mpq_ptr) p));
 							break;
 						case 'q':
@@ -389,7 +383,7 @@ static void mp__set(lua_State *L, int i, void *z, char t)
 					switch (t) {
 						case 'z':
 							if (!mpf_integer_p(p))
-								goto error;
+								goto integer_check_fail;
 							mpz_set_f(z, p);
 							break;
 						case 'q':
