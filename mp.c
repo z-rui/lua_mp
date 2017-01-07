@@ -274,7 +274,13 @@ static void *mp_new(lua_State *L, char t)
 	mp_bitcnt_t prec;
 
 	if (t == 'f') {
-		prec = _castbitcnt(L, -1);
+		lua_Integer val;
+		int isint;
+
+		val = lua_tointegerx(L, -1, &isint);
+		if (!isint || !CAN_HOLD(mp_bitcnt_t, val))
+			luaL_error(L, "bad precision");
+		prec = val;
 		lua_pop(L, 1); /* precision */
 	}
 	T[2] = t;
