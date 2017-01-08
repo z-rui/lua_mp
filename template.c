@@ -11,6 +11,91 @@ static mp$_ptr _tomp$(lua_State *L, int i)
 	return _tomp(L, i, '$');
 }
 
+static int $_gc(lua_State *L)
+{
+	mp$_ptr z;
+
+	z = $__check(L, 1);
+	mp$_clear(z);
+	lua_pushnil(L);
+	lua_setmetatable(L, 1);
+	return 0;
+}
+
+static int $_tostring(lua_State *L)	/** tostring(x) */
+{
+	mp$_ptr z;
+	int base, absbase;
+	luaL_Buffer B;
+	size_t sz;
+	char *s;
+#ifdef MPF
+	size_t n_digits;
+	mp_exp_t exp;
+#endif
+
+	z = $__check(L, 1);
+	base = _check_outbase(L, 2);
+	absbase = abs(base);
+#if defined(MPZ)
+	sz = mpz_sizeinbase(z, absbase) + 2;
+#elif defined(MPQ)
+	sz = mpz_sizeinbase(mpq_numref((mpq_ptr) z), absbase)
+	   + mpz_sizeinbase(mpq_denref((mpq_ptr) z), absbase)
+	   + 3;
+#elif defined(MPF)
+	n_digits = (size_t) luaL_optinteger(L, 3, 0);
+	if (n_digits == 0) {
+		/* guess buffer size */
+		n_digits = absbase;
+		sz = 0;
+		while (n_digits >>= 1) ++sz;
+		sz = mpf_get_prec(z) / sz + 10;
+	} else {
+		sz = n_digits + 4;
+	}
+#endif
+	s = luaL_buffinitsize(L, &B, sz);
+#ifndef MPF
+	mp$_get_str(s, base, z);
+	luaL_pushresultsize(&B, strlen(s));
+#else
+	s[0] = '0';
+	s[1] = '.';
+	mpf_get_str(s+2, &exp, base, n_digits, z);
+	luaL_addsize(&B, strlen(s));
+	luaL_addchar(&B, (absbase > 10) ? '@' : 'e');
+	lua_pushinteger(L, exp);
+	luaL_addvalue(&B);
+	luaL_pushresult(&B);
+#endif
+	return 1;
+}
+
+static int $_tonumber(lua_State *L)
+{
+	mp$_ptr z;
+	double val = 0;
+
+	z = $__check(L, 1);
+#ifdef MPZ
+	/* FIXME 'signed long' maybe shorter than 'lua_Integer' */
+	if (mpz_fits_slong_p(z)) {
+		long val;
+
+		val = mpz_get_si(z);
+		lua_pushinteger(L, val);
+		return 1;
+	}
+#endif
+#ifdef MPQ
+	q_checksanity(L, 1, z);
+#endif
+	val = mp$_get_d(z);
+	lua_pushnumber(L, val);
+	return 1;
+}
+
 static int $_set(lua_State *L)
 {
 	mp$_ptr z;
@@ -723,7 +808,7 @@ static int q__partial_ref(lua_State *L, int i, mpz_ptr z)
 		lua_pushvalue(L, -1);
 		lua_setmetatable(L, -3);
 		/* restore __gc method */
-		lua_pushcfunction(L, _gc);
+		lua_pushcfunction(L, z_gc);
 		lua_setfield(L, -2, "__gc");
 	}
 	/* doesn't matter if no such metatable;
@@ -901,15 +986,15 @@ static int $_out_str(lua_State *L)
 
 static const luaL_Reg $_Meta[] = {
 	/* Note: keep __gc the first */
-	{ "__gc",	_gc	},
-	{ "__tostring", _tostring	},
+	METAMETHOD(gc),
+	METAMETHOD(tostring),
 	{ NULL,		NULL	}
 };
 
 static const luaL_Reg $_Reg[] =
 {
-	{ "tostring",	_tostring	},
-	{ "tonumber",	_tonumber	},
+	METHOD(tostring),
+	METHOD(tonumber),
 
 	METHOD(set),
 	METHOD(swap),
