@@ -23,16 +23,6 @@
 
 #define CAN_HOLD(type, val) ((type) (val) == (val))
 
-static void _conversion_error(lua_State *L, int i, char t, int base)
-{
-	if (base) {
-		lua_pushfstring(L, "invalid string in base %d", base);
-	} else {
-		lua_pushfstring(L, "number expected, got %s", lua_typename(L, lua_type(L, i)));
-	}
-	luaL_argerror(L, i, lua_tostring(L, -1));
-}
-
 static void _check_divisor(lua_State *L, mpz_ptr divisor)
 {
 	if (mpz_sgn(divisor) == 0)
@@ -309,8 +299,14 @@ static void mp__set_str(lua_State *L, int i, int base, void *z, char t)
 		case 'q': rc = mpq_set_str(z, s, base); break;
 		case 'f': rc = mpf_set_str(z, s, base); break;
 	}
-	if (rc != 0)
-		_conversion_error(L, i, t, base);
+	if (rc != 0) {
+		if (base) {
+			lua_pushfstring(L, "invalid string in base %d", base);
+			luaL_argerror(L, i, lua_tostring(L, -1));
+		} else {
+			luaL_argerror(L, i, "invalid string");
+		}
+	}
 }
 
 static void mp__set_int(lua_State *L, int i, void *z, char t)
@@ -401,7 +397,8 @@ integer_check_fail:
 		}
 		default:
 error:
-			_conversion_error(L, i, t, 0);
+			lua_pushfstring(L, "number expected, got %s", lua_typename(L, lua_type(L, i)));
+			luaL_argerror(L, i, lua_tostring(L, -1));
 	}
 }
 
